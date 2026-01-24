@@ -4,6 +4,8 @@ go 1.24
 
 tool golang.org/x/vuln/cmd/govulncheck
 
+require github.com/magefile/mage v1.15.0
+
 require (
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
