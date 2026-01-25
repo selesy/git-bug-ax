@@ -457,16 +457,47 @@ All operations are exposed as MCP tools with identical semantics:
 
 - [ ] `branch` field in metadata → naming convention or assigned branch for work
 - [ ] Formalize handoffs, e.g., a `qa-agent` that automatically picks up `review` tasks, runs the `Verification` command, and moves to `done` or `needs-replanning`.
+- [ ] **Branch Management Strategy**: Core metadata for branch tracking including name, strategy (feature-branch/trunk-based/fork), base branch, creation status, push status, and PR URL. Critical for swarm coordination.
+- [ ] **Work Session Persistence**: Track work sessions across interruptions with branch name, timestamps, heartbeat, progress percentage, and checkpoint messages. Add `ax checkpoint <id> <message>` and `ax resume <id>` operations.
+- [ ] **Pre-work Validation**: Add `ax validate-claim <id>` operation that checks if agent can complete work before claiming (environment requirements, file conflicts, capabilities, dependencies).
+- [ ] **Atomic Compound Operations**: Operations like `ax claim-and-start <id>` and `ax complete-and-unblock <id>` to reduce race condition windows.
+
+### Agent Collaboration & Communication
+
+- [ ] **Multi-Agent Collaboration**: Support multiple agents per task with primary owner and collaborators (each with roles like reviewer, consultant). Add `ax invite <id> <agent-id> <role>` and `ax join <id> <role>` operations.
+- [ ] **Structured Agent Communication**: Beyond append-only comments, add structured handoff metadata with from/to agents, messages, concerns, decisions, and blockers removed. Add `ax handoff <id> <to-agent> --message="..." --concerns="..."` operation.
+
+### Conflict Detection & Coordination
+
+- [ ] **File-Level Conflict Detection**: Structured `files_affected` metadata with path, operation (modify/create/delete), and line ranges. Add `ax files-in-use` query to show what files are locked by in-progress tasks. Provide advisory warnings when claiming tasks that modify same files as other in-progress tasks.
+- [ ] **Workspace Isolation Metadata**: Track workspace type (worktree/container/vm), path, container ID, and devcontainer config to support parallel agent execution without interference.
+
+### Verification & Quality
+
+- [ ] **Verification Results Storage**: Store structured verification history including timestamp, agent, command, exit code, duration, output summary, and artifact links. Enables automated QA agents and flaky test detection.
+
+### Learning & Optimization
+
+- [ ] **Effort Estimation & Learning**: Add `estimates` (complexity, story points) and `actuals` (duration, agent operations, LLM tokens, attempts) metadata. Creates feedback loop for planning agents to improve estimates over time.
+- [ ] **Cost & Resource Tracking**: Track budget allocated, actual cost, LLM tokens, compute seconds, and API calls per service. Enables agents to optimize for cost, not just completion.
+
+### Query & Discovery
+
+- [ ] **Graph Query Operations**: Add operations like `ax tree <id>` (hierarchical view), `ax blockers-recursive <id>` (transitive closure), `ax impact <id>` (what this unblocks), `ax timeline <id>` (status change history).
+- [ ] **Search & Discovery**: Add `ax search <query>` (full-text), `ax similar <id>` (find similar tasks), `ax history <path>` (all tasks that modified file), `ax blame <path> <line>` (what task introduced line).
 
 ### Observability
 
-- [ ] Metrics endpoint: claims/completions/failures per agent
+- [ ] OpenTelemetry integration for metrics, traces, and events (sent to collector or no-op'd)
+- [ ] Go profiler enabled via global flag
 - [ ] Contention tracking: which tasks get claimed multiple times
 
-### Safety
+### Safety & Reliability
 
 - [ ] Max concurrent claims per agent
 - [ ] Circuit breaker: pause agent if failure rate spikes
+- [ ] **Escalation & Human-in-the-Loop**: Add `escalation_policy` metadata with max attempts, file patterns requiring human approval, notification triggers, and timeout. Track escalation status, timestamp, and reason.
+- [ ] **Schema Versioning**: Add `ax_schema_version` field to all snapshots for graceful handling of unknown fields from newer versions.
 
 ### Templates
 
