@@ -19,7 +19,7 @@ Key design goals:
 
 | Layer | Contents | Purpose |
 |-------|----------|---------|
-| **Metadata** | status, type, priority, parent, blocks, claimed_by | Coordination, querying, filtering |
+| **Metadata** | status, type, priority, parent, blocks, claimed_by, required_capabilities | Coordination, querying, filtering |
 | **Body (Markdown)** | scope, files-affected, implementation, acceptance criteria | Execution context |
 | **Comments** | work log, status change events | Append-only audit trail |
 
@@ -72,9 +72,10 @@ Fine-grained status for agent coordination:
 | `failed` | Attempted, couldn't satisfy acceptance criteria |
 | `stale` | Claimed/in-progress too long without update |
 | `needs-decomposition` | Too large, return to planning agent |
+| `needs-replanning` | A failure suggests the implementation plan is flawed |
 | `contested` | Detected concurrent claims |
 
-The `abandoned` vs `failed` distinction matters—`abandoned` means "try again," `failed` means "needs human input or re-planning."
+The `abandoned` vs `failed` distinction matters—`abandoned` means "try again," `failed` means "needs human input or re-planning." A `needs-replanning` status triggers a feedback loop, automatically notifying a planning agent that the original approach was flawed and requires a new plan.
 
 ### `ax_type`
 
@@ -97,6 +98,10 @@ Ordering for `next` and `claim-next`:
 2. Tie-break by issue hash (lexicographic)
 
 Since git-bug identifies issues by their initial hash, combining priority with hash guarantees deterministic ordering across all agents in a swarm—no two agents will disagree on which task is "next."
+
+### `ax_required_capabilities`
+
+An array of strings specifying agent capabilities required for the task (e.g., `["go", "react", "database"]`). This allows for intelligent task routing in a swarm with specialized agents.
 
 ### `ax_parent`
 
@@ -257,6 +262,12 @@ The issue body uses Markdown with structured sections. Sections are both human-r
 - pkg/api/handler.go
 - pkg/validate/rules.go
 
+## Environment
+
+- Details for reproducing the development environment
+- Required dependencies, environment variables, or secrets
+- Link to a devcontainer definition or Dockerfile
+
 ## Implementation
 
 - Use existing validator package
@@ -269,6 +280,10 @@ The issue body uses Markdown with structured sections. Sections are both human-r
 - Invalid inputs return 400 with descriptive error
 - Unit tests cover new validation rules
 - Existing tests pass
+
+## Verification
+
+- `go test ./pkg/api -run TestUserValidation`
 ```
 
 ### Parsing Rules
@@ -289,6 +304,8 @@ Parsing is lenient to accommodate human edits:
 | `Files Affected` | `files-affected`, `Files`, `files` |
 | `Implementation` | `implementation`, `Implementation Details` |
 | `Acceptance Criteria` | `acceptance criteria`, `AC`, `Done When` |
+| `Environment` | `environment`, `env`, `Setup` |
+| `Verification` | `verification`, `Test Plan`, `Test Command` |
 
 ### Validation
 
@@ -341,7 +358,9 @@ All operations return JSON snapshots:
       "scope": ["Add JWT validation to auth middleware"],
       "files_affected": ["pkg/api/handler.go", "pkg/validate/rules.go"],
       "implementation": ["Use existing validator package..."],
-      "acceptance_criteria": ["All inputs validated", "Tests pass"]
+      "acceptance_criteria": ["All inputs validated", "Tests pass"],
+      "verification": ["go test ./pkg/api -run TestUserValidation"],
+      "environment": ["Requires GO_API_KEY to be set"]
     }
   },
   "recent_log": [
@@ -361,6 +380,7 @@ Read-only operations that don't create CRDT ops.
 | `ax ready` | Unblocked, claimable tasks | Array of snapshots |
 | `ax ready --type=task` | Filter by type | Array of snapshots |
 | `ax ready --label=backend` | Filter by label | Array of snapshots |
+| `ax ready --has-capability=go` | Filter by agent capability | Array of snapshots |
 | `ax mine` | Tasks claimed by this agent | Array of snapshots |
 | `ax blocked` | Tasks waiting on dependencies | Array with blocker info |
 | `ax children <id>` | Subtasks of an issue | Array of snapshots |
@@ -396,7 +416,7 @@ Convenience operations combining multiple steps.
 |-----------|-------------|--------|
 | `ax claim-next` | Claim highest priority ready task | Find + claim atomically |
 | `ax claim-next --type=task` | Filter by type | Find + claim with filter |
-| `ax claim-next --label=backend` | Filter by label | Find + claim with filter |
+| `ax claim-next --has-capability=go` | Filter by agent capability | Find + claim with filter |
 | `ax log <id> <message>` | Add work log entry | Append comment |
 | `ax verify-claim <id>` | Check claim status | Returns boolean + current snapshot |
 | `ax decompose <id> <child-ids...>` | Create subtask relationship | Set children's parent, update original status |
@@ -428,15 +448,15 @@ All operations are exposed as MCP tools with identical semantics:
 
 ### Agent Identity & Lifecycle
 
-- [ ] Agent registration / naming convention (e.g., `planner-01`, `coder-swarm-03`)
+- [ ] Agent registration / naming convention (e.g., `planner-01`, `coder-swarm-03`, `qa-01`)
+- [ ] Agent capability registration (e.g., `go`, `react`, `database`)
 - [ ] Heartbeat or TTL on claims → auto-transition to `stale` after timeout
 - [ ] Claim history (who attempted, not just current holder)
 
-### Execution Hints
+### Execution & Workflow
 
-- [ ] `test_command` field → how to verify acceptance criteria
-- [ ] `branch` field → naming convention or assigned branch
-- [ ] `estimated_size` → small/medium/large for agent self-selection (consider using labels)
+- [ ] `branch` field in metadata → naming convention or assigned branch for work
+- [ ] Formalize handoffs, e.g., a `qa-agent` that automatically picks up `review` tasks, runs the `Verification` command, and moves to `done` or `needs-replanning`.
 
 ### Observability
 
@@ -451,6 +471,25 @@ All operations are exposed as MCP tools with identical semantics:
 ### Templates
 
 - [ ] Per-type body templates so planning agents generate consistent structure
+
+### Advanced Concepts: Trust, Knowledge, and Economics
+
+For a more mature swarm, the following concepts provide a path to greater autonomy and intelligence:
+
+- **Cryptographic Agent Identity & Trust**:
+  - [ ] Agents generate public/private key pairs for identity.
+  - [ ] All CRDT operations (claims, status changes) are cryptographically signed.
+  - This provides non-repudiation, enables access control (e.g., only planners can create epics), and establishes a zero-trust model between agents.
+
+- **Shared Knowledge Base**:
+  - [ ] Implement a parallel, git-based knowledge base (e.g., Markdown files in a repo) for durable, swarm-wide learning.
+  - [ ] Agents can write Architectural Decision Records (ADRs), post-mortems for failed tasks, or best-practice guides.
+  - [ ] Issues can link to knowledge base articles, allowing agents to learn from past successes and failures, reducing redundant work.
+
+- **Economic Primitives for Prioritization**:
+  - [ ] Introduce `budget` and `bounty` metadata fields.
+  - [ ] Epics/features are allocated a `budget`. Planners assign a `bounty` to each sub-task based on value/difficulty.
+  - [ ] Agents "earn" bounties, creating a market-based incentive system that dynamically prioritizes the most valuable work and provides clear metrics for agent performance and cost control.
 
 ## Installation
 
