@@ -1,1 +1,1 @@
-{"author":{"id":"1cd686f4b17d9b7fdf534c7017b0a89d2a21f6e0b7dfceee6a010c9bc3cf4c3b"},"ops":[{"type":6,"timestamp":1769373260,"nonce":"bUs01RRwoyOrMTPYVmUek6lcscI=","target":"834adb19f8c3849e7bd341320dc8300ed318fc7a625d852e4ab0fbf4b4b37b4f","message":"[work log] Updated issue body to add environment and verification sections (amp agent)","files":null}]}
+{"author":{"id":"1cd686f4b17d9b7fdf534c7017b0a89d2a21f6e0b7dfceee6a010c9bc3cf4c3b"},"ops":[{"type":5,"timestamp":1770208329,"nonce":"wDvK+iFNzRODAXrpZs/EEKBza+U=","added":null,"removed":["ax_priority:14"]}]}
