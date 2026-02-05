@@ -1,1 +1,1 @@
-{"author":{"id":"b0fe8127100245d129bf2f969419bdcfd34fa0e39e91bd82fb4288f747db9e2a"},"ops":[{"type":8,"timestamp":1770292134,"nonce":"cKOL0SSbZl3CqopIfUVOCFX98MU=","target":"611d1c074c01f2a808b350056a38375ceac3602af0005b285c381054b5018acb","new_metadata":{"ax_priority":"low"}}]}
+{"author":{"id":"b0fe8127100245d129bf2f969419bdcfd34fa0e39e91bd82fb4288f747db9e2a"},"ops":[{"type":3,"timestamp":1770292134,"nonce":"GxxU8oUuPPxqD4hT5KcVNqCcEdU=","message":"Changed priority to High","files":null}]}
