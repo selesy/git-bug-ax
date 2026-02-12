@@ -1,1 +1,1 @@
-{"author":{"id":"17ad2cd7ab06d63dd804f629e8838bd5a4fa036d0e8755451b778ceb954f9ade"},"ops":[{"type":3,"timestamp":1770899743,"nonce":"qdFRaXQn9o/4qxYHkIlgMp+96Pc=","message":"Renamed from 'ax log' to 'ax comment' to align with git-bug's native naming convention. Updated README references accordingly.","files":null}]}
+{"author":{"id":"17ad2cd7ab06d63dd804f629e8838bd5a4fa036d0e8755451b778ceb954f9ade"},"ops":[{"type":2,"timestamp":1770899746,"nonce":"isJx3wohh0JcSmqKF7nFNVef+0M=","title":"feat(compound): ax log command","was":"feat(compound): ax log command"}]}
