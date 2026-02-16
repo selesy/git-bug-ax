@@ -218,6 +218,38 @@ func (i *Issue) Blocks() (types.Set[ID, *ID], error) {
 	return make(types.Set[ID, *ID]), nil
 }
 
+// SetReferences sets the references relationship.
+func (i *Issue) SetReferences(references types.Set[ID, *ID]) error {
+	data, err := references.MarshalText()
+	if err != nil {
+		return err
+	}
+	i.mutations["references"] = string(data)
+	i.dirty = true
+	return nil
+}
+
+// References returns the current references relationship.
+func (i *Issue) References() (types.Set[ID, *ID], error) {
+	if r, ok := i.mutations["references"]; ok {
+		if referencesStr, ok := r.(string); ok {
+			result := make(types.Set[ID, *ID])
+			if err := result.UnmarshalText([]byte(referencesStr)); err != nil {
+				return nil, err
+			}
+			return result, nil
+		}
+	}
+	if r, exists := i.metadata["ax_references"]; exists {
+		result := make(types.Set[ID, *ID])
+		if err := result.UnmarshalText([]byte(r)); err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+	return make(types.Set[ID, *ID]), nil
+}
+
 // SetDiscoverer sets the discoverer identity.
 func (i *Issue) SetDiscoverer(id ID) {
 	i.mutations["discoverer"] = id.String()

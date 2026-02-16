@@ -38,6 +38,13 @@ func WithBlocks(blocks types.Set[ID, *ID]) Option {
 	}
 }
 
+// WithReferences creates an option that sets the references relationship.
+func WithReferences(references types.Set[ID, *ID]) Option {
+	return func(i *Issue) error {
+		return i.SetReferences(references)
+	}
+}
+
 // WithDiscoverer creates an option that sets the discoverer.
 func WithDiscoverer(id ID) Option {
 	return func(i *Issue) error {
