@@ -2,6 +2,7 @@ package issue
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/git-bug/git-bug/cache"
 	"github.com/git-bug/git-bug/entities/bug"
@@ -274,6 +275,70 @@ func (i *Issue) Resolution() Resolution {
 		return resolution
 	}
 	return Resolution{}
+}
+
+// Labels returns the current labels of the issue from the bug snapshot.
+func (i *Issue) Labels() types.Set[types.Label, *types.Label] {
+	snap := i.bugMeta.getSnapshot()
+	result := make(types.Set[types.Label, *types.Label])
+	for _, label := range snap.Labels {
+		result.Add(types.Label(label.String()))
+	}
+	return result
+}
+
+// SetLabels sets the labels of the issue using the bug's ChangeLabels operation.
+// It determines which labels have been added or removed (case-insensitive) and
+// creates a LabelChangeOperation if changes are detected.
+func (i *Issue) SetLabels(newLabels types.Set[types.Label, *types.Label]) error {
+	// Get current labels from the bug snapshot and convert to case-insensitive map
+	snap := i.bugMeta.getSnapshot()
+	currentLabelsLower := make(map[string]struct{})
+	for _, label := range snap.Labels {
+		currentLabelsLower[strings.ToLower(label.String())] = struct{}{}
+	}
+
+	// Convert new labels to case-insensitive map and determine added/removed
+	newLabelsLower := make(map[string]struct{})
+	var added []string
+	for label := range newLabels {
+		lower := strings.ToLower(string(label))
+		newLabelsLower[lower] = struct{}{}
+		if _, exists := currentLabelsLower[lower]; !exists {
+			// This is a new label (case-insensitive)
+			added = append(added, string(label))
+		}
+	}
+
+	// Find removed labels
+	var removed []string
+	for label := range currentLabelsLower {
+		if _, exists := newLabelsLower[label]; !exists {
+			// Find the original case of the removed label
+			for _, origLabel := range snap.Labels {
+				if strings.ToLower(origLabel.String()) == label {
+					removed = append(removed, origLabel.String())
+					break
+				}
+			}
+		}
+	}
+
+	// If no changes, return early
+	if len(added) == 0 && len(removed) == 0 {
+		return nil
+	}
+
+	// Apply the label changes to the bug
+	switch bugVal := i.bugIface.(type) {
+	case *cache.BugCache:
+		_, _, err := bugVal.ChangeLabels(added, removed)
+		return err
+	case *bug.Bug:
+		return fmt.Errorf("SetLabels not supported for bug.Bug directly; use BugCache instead")
+	default:
+		return fmt.Errorf("unsupported bug type: %T", i.bugIface)
+	}
 }
 
 // Commit saves the issue changes to the bug.

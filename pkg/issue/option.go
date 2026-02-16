@@ -68,3 +68,10 @@ func WithTitle(title string) Option {
 		return i.SetTitle(title)
 	}
 }
+
+// WithLabels creates an option that sets the labels.
+func WithLabels(labels types.Set[types.Label, *types.Label]) Option {
+	return func(i *Issue) error {
+		return i.SetLabels(labels)
+	}
+}
