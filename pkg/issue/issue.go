@@ -9,6 +9,7 @@ import (
 	"github.com/git-bug/git-bug/entities/identity"
 	"github.com/git-bug/git-bug/entity"
 	"github.com/git-bug/git-bug/entity/dag"
+	"github.com/selesy/git-bug-ax/internal/metadata"
 	"github.com/selesy/git-bug-ax/internal/types"
 )
 
@@ -45,8 +46,8 @@ func (w *bugBugWrapper) getSnapshot() *bug.Snapshot {
 	return w.Compile()
 }
 
-// New creates a new Issue wrapper around a bug (can be either bug.Bug or cache.BugCache).
-func New(b interface{}) (*Issue, error) {
+// Wrap creates a new Issue wrapper around a bug (can be either bug.Bug or cache.BugCache).
+func Wrap(b interface{}) (*Issue, error) {
 	if b == nil {
 		return nil, fmt.Errorf("bug cannot be nil")
 	}
@@ -115,7 +116,7 @@ func (i *Issue) Priority() Priority {
 		}
 	}
 	// Try to get from metadata
-	if p, exists := i.metadata["ax_priority"]; exists {
+	if p, exists := i.metadata[metadata.KeyPriority]; exists {
 		var priority Priority
 		_ = priority.UnmarshalText([]byte(p))
 		return priority
@@ -136,7 +137,7 @@ func (i *Issue) Status() Status {
 			return status
 		}
 	}
-	if s, exists := i.metadata["ax_status"]; exists {
+	if s, exists := i.metadata[metadata.KeyStatus]; exists {
 		var status Status
 		_ = status.UnmarshalText([]byte(s))
 		return status
@@ -157,7 +158,7 @@ func (i *Issue) Type() Type {
 			return typ
 		}
 	}
-	if t, exists := i.metadata["ax_type"]; exists {
+	if t, exists := i.metadata[metadata.KeyType]; exists {
 		var issueType Type
 		_ = issueType.UnmarshalText([]byte(t))
 		return issueType
@@ -208,7 +209,7 @@ func (i *Issue) Blocks() (types.Set[ID, *ID], error) {
 			return result, nil
 		}
 	}
-	if b, exists := i.metadata["ax_blocks"]; exists {
+	if b, exists := i.metadata[metadata.KeyBlocks]; exists {
 		result := make(types.Set[ID, *ID])
 		if err := result.UnmarshalText([]byte(b)); err != nil {
 			return nil, err
@@ -240,7 +241,7 @@ func (i *Issue) References() (types.Set[ID, *ID], error) {
 			return result, nil
 		}
 	}
-	if r, exists := i.metadata["ax_references"]; exists {
+	if r, exists := i.metadata[metadata.KeyReferences]; exists {
 		result := make(types.Set[ID, *ID])
 		if err := result.UnmarshalText([]byte(r)); err != nil {
 			return nil, err
@@ -263,7 +264,7 @@ func (i *Issue) Discoverer() (ID, error) {
 			return NewID(discovererStr)
 		}
 	}
-	if d, exists := i.metadata["ax_discoverer"]; exists {
+	if d, exists := i.metadata[metadata.KeyDiscoverer]; exists {
 		return NewID(d)
 	}
 	return ID{}, fmt.Errorf("no discoverer set")
@@ -282,10 +283,10 @@ func (i *Issue) Parent() (ID, error) {
 			return NewID(parentStr)
 		}
 	}
-	if p, exists := i.metadata["ax_parent"]; exists {
+	if p, exists := i.metadata[metadata.KeyParent]; exists {
 		return NewID(p)
 	}
-	return ID{}, fmt.Errorf("no parent set")
+	return ID{}, ErrNoParent
 }
 
 // SetResolution sets the resolution of the issue.
@@ -301,7 +302,7 @@ func (i *Issue) Resolution() Resolution {
 			return resolution
 		}
 	}
-	if r, exists := i.metadata["ax_resolution"]; exists {
+	if r, exists := i.metadata[metadata.KeyResolution]; exists {
 		var resolution Resolution
 		_ = resolution.UnmarshalText([]byte(r))
 		return resolution
@@ -379,25 +380,25 @@ func (i *Issue) Commit(identity identity.Interface) error {
 		return nil
 	}
 
-	metadata := make(map[string]string)
+	metadataMap := make(map[string]string)
 
 	// Collect all mutations
 	for key, val := range i.mutations {
 		if v, ok := val.(string); ok {
-			metadata[fmt.Sprintf("ax_%s", key)] = v
+			metadataMap[metadata.Prefix+key] = v
 		} else if v, ok := val.(fmt.Stringer); ok {
-			metadata[fmt.Sprintf("ax_%s", key)] = v.String()
+			metadataMap[metadata.Prefix+key] = v.String()
 		}
 	}
 
 	// Apply metadata to bug based on type
-	if len(metadata) > 0 {
+	if len(metadataMap) > 0 {
 		var err error
 		switch bugVal := i.bugIface.(type) {
 		case *cache.BugCache:
-			_, err = bugVal.SetMetadata(bugVal.Id(), metadata)
+			_, err = bugVal.SetMetadata(bugVal.Id(), metadataMap)
 		case *bug.Bug:
-			_, err = bug.SetMetadata(bugVal, identity, 0, bugVal.Id(), metadata)
+			_, err = bug.SetMetadata(bugVal, identity, 0, bugVal.Id(), metadataMap)
 		default:
 			return fmt.Errorf("unsupported bug type in Commit: %T", i.bugIface)
 		}
