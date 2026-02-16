@@ -14,19 +14,32 @@ type Status struct {
 }
 
 var (
-	StatusDraft              = Status{"draft"}
-	StatusReady              = Status{"ready"}
-	StatusClaimed            = Status{"claimed"}
-	StatusInProgress         = Status{"in-progress"}
-	StatusBlocked            = Status{"blocked"}
-	StatusReview             = Status{"review"}
-	StatusDone               = Status{"done"}
-	StatusAbandoned          = Status{"abandoned"}
-	StatusFailed             = Status{"failed"}
-	StatusStale              = Status{"stale"}
+	// StatusDraft represents a draft issue that is not yet ready.
+	StatusDraft = Status{"draft"}
+	// StatusReady represents an issue that is ready to be claimed.
+	StatusReady = Status{"ready"}
+	// StatusClaimed represents an issue that has been claimed by someone.
+	StatusClaimed = Status{"claimed"}
+	// StatusInProgress represents an issue that is currently being worked on.
+	StatusInProgress = Status{"in-progress"}
+	// StatusBlocked represents an issue that is blocked and cannot proceed.
+	StatusBlocked = Status{"blocked"}
+	// StatusReview represents an issue that is under review.
+	StatusReview = Status{"review"}
+	// StatusDone represents an issue that is completed.
+	StatusDone = Status{"done"}
+	// StatusAbandoned represents an issue that has been abandoned.
+	StatusAbandoned = Status{"abandoned"}
+	// StatusFailed represents an issue where work has failed.
+	StatusFailed = Status{"failed"}
+	// StatusStale represents an issue that is no longer current.
+	StatusStale = Status{"stale"}
+	// StatusNeedsDecomposition represents an issue that needs to be broken down.
 	StatusNeedsDecomposition = Status{"needs-decomposition"}
-	StatusNeedsReplanning    = Status{"needs-replanning"}
-	StatusContested          = Status{"contested"}
+	// StatusNeedsReplanning represents an issue that needs to be replanned.
+	StatusNeedsReplanning = Status{"needs-replanning"}
+	// StatusContested represents an issue that has conflicting opinions.
+	StatusContested = Status{"contested"}
 )
 
 // MarshalText implements encoding.TextMarshaler.
@@ -70,7 +83,7 @@ func (s *Status) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// String implements fmt.Stringer.
+// String implements fmt.Stringer, returning the string representation of the status.
 func (s Status) String() string {
 	return s.value
 }
@@ -79,6 +92,9 @@ func (s Status) String() string {
 var _ types.TextCodec = (*Status)(nil)
 
 // ParseStatus returns a Status from a string, or an error if the string is invalid.
+// Valid values are: "draft", "ready", "claimed", "in-progress", "blocked", "review",
+// "done", "abandoned", "failed", "stale", "needs-decomposition", "needs-replanning",
+// "contested" (case-insensitive).
 func ParseStatus(s string) (Status, error) {
 	var st Status
 	if err := st.UnmarshalText([]byte(s)); err != nil {

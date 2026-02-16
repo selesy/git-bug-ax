@@ -14,11 +14,16 @@ type Priority struct {
 }
 
 var (
+	// PriorityHighest represents the highest priority level.
 	PriorityHighest = Priority{"highest"}
-	PriorityHigh    = Priority{"high"}
-	PriorityMedium  = Priority{"medium"}
-	PriorityLow     = Priority{"low"}
-	PriorityLowest  = Priority{"lowest"}
+	// PriorityHigh represents a high priority level.
+	PriorityHigh = Priority{"high"}
+	// PriorityMedium represents a medium priority level.
+	PriorityMedium = Priority{"medium"}
+	// PriorityLow represents a low priority level.
+	PriorityLow = Priority{"low"}
+	// PriorityLowest represents the lowest priority level.
+	PriorityLowest = Priority{"lowest"}
 )
 
 // MarshalText implements encoding.TextMarshaler.
@@ -46,7 +51,7 @@ func (p *Priority) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// String implements fmt.Stringer.
+// String implements fmt.Stringer, returning the string representation of the priority.
 func (p Priority) String() string {
 	return p.value
 }
@@ -55,6 +60,7 @@ func (p Priority) String() string {
 var _ types.TextCodec = (*Priority)(nil)
 
 // ParsePriority returns a Priority from a string, or an error if the string is invalid.
+// Valid values are: "highest", "high", "medium", "low", "lowest" (case-insensitive).
 func ParsePriority(s string) (Priority, error) {
 	var p Priority
 	if err := p.UnmarshalText([]byte(s)); err != nil {

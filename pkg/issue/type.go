@@ -14,22 +14,38 @@ type Type struct {
 }
 
 var (
-	TypeEpic     = Type{"epic"}
-	TypeFeature  = Type{"feature"}
-	TypeTask     = Type{"task"}
-	TypeBug      = Type{"bug"}
-	TypeSpike    = Type{"spike"}
+	// TypeEpic represents a large body of work that spans multiple issues.
+	TypeEpic = Type{"epic"}
+	// TypeFeature represents a new feature request.
+	TypeFeature = Type{"feature"}
+	// TypeTask represents a general task or work item.
+	TypeTask = Type{"task"}
+	// TypeBug represents a bug or defect.
+	TypeBug = Type{"bug"}
+	// TypeSpike represents a time-boxed investigation or research task.
+	TypeSpike = Type{"spike"}
+	// TypeTechDebt represents technical debt that needs to be addressed.
 	TypeTechDebt = Type{"tech-debt"}
-	TypeFix      = Type{"fix"}
-	TypeFeat     = Type{"feat"}
-	TypeBuild    = Type{"build"}
-	TypeChore    = Type{"chore"}
-	TypeCI       = Type{"ci"}
-	TypeDocs     = Type{"docs"}
-	TypeStyle    = Type{"style"}
+	// TypeFix represents a bug fix.
+	TypeFix = Type{"fix"}
+	// TypeFeat represents a new feature (alternative naming).
+	TypeFeat = Type{"feat"}
+	// TypeBuild represents a build or deployment task.
+	TypeBuild = Type{"build"}
+	// TypeChore represents a maintenance or housekeeping task.
+	TypeChore = Type{"chore"}
+	// TypeCI represents a continuous integration task.
+	TypeCI = Type{"ci"}
+	// TypeDocs represents a documentation task.
+	TypeDocs = Type{"docs"}
+	// TypeStyle represents a code style or formatting task.
+	TypeStyle = Type{"style"}
+	// TypeRefactor represents a refactoring task.
 	TypeRefactor = Type{"refactor"}
-	TypeTest     = Type{"test"}
-	TypePerf     = Type{"perf"}
+	// TypeTest represents a testing task.
+	TypeTest = Type{"test"}
+	// TypePerf represents a performance optimization task.
+	TypePerf = Type{"perf"}
 )
 
 // MarshalText implements encoding.TextMarshaler.
@@ -79,7 +95,7 @@ func (t *Type) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// String implements fmt.Stringer.
+// String implements fmt.Stringer, returning the string representation of the type.
 func (t Type) String() string {
 	return t.value
 }
@@ -88,6 +104,9 @@ func (t Type) String() string {
 var _ types.TextCodec = (*Type)(nil)
 
 // ParseType returns a Type from a string, or an error if the string is invalid.
+// Valid values are: "epic", "feature", "task", "bug", "spike", "tech-debt", "fix",
+// "feat", "build", "chore", "ci", "docs", "style", "refactor", "test", "perf"
+// (case-insensitive).
 func ParseType(s string) (Type, error) {
 	var t Type
 	if err := t.UnmarshalText([]byte(s)); err != nil {
