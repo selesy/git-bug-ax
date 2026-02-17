@@ -1,0 +1,209 @@
+package issue_test
+
+import (
+	"maps"
+	"testing"
+
+	"github.com/git-bug/git-bug/cache"
+	"github.com/git-bug/git-bug/commands/bug/testenv"
+	"github.com/git-bug/git-bug/entities/bug"
+	"github.com/git-bug/git-bug/entity/dag"
+	"github.com/selesy/git-bug-ax/internal/metadata"
+	"github.com/selesy/git-bug-ax/pkg/issue"
+	"github.com/selesy/git-bug-ax/pkg/issue/issuetest"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCreate(t *testing.T) {
+	t.Parallel()
+
+	const (
+		testTitle       = "Issue with a title and a description"
+		testDescription = "This description should appear as the issue's first comment"
+	)
+
+	t.Run("with missing WithTitle option", func(t *testing.T) {
+		t.Parallel()
+
+		env, _ := testenv.NewTestEnvAndUser(t)
+
+		_, err := issue.Create(env)
+		require.ErrorIs(t, err, issue.ErrNoTitle)
+	})
+
+	t.Run("with empty WithTitle option", func(t *testing.T) {
+		t.Parallel()
+
+		env, _ := testenv.NewTestEnvAndUser(t)
+
+		_, err := issue.Create(env, issue.WithTitle(""))
+		require.ErrorIs(t, err, issue.ErrNoTitle)
+	})
+
+	t.Run("with only valid WithTitle option", func(t *testing.T) {
+		t.Parallel()
+
+		const testTitle = "Issue with only a title"
+
+		env, iss := issuetest.NewTestIssue(
+			t,
+			issue.WithTitle(testTitle),
+		)
+
+		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
+		require.NoError(t, err)
+		snap := bug.Snapshot()
+		assert.Len(t, snap.Operations, 1)
+		assert.Equal(t, testTitle, snap.Title)
+		assert.Len(t, snap.Comments, 1)
+		assert.Empty(t, snap.Comments[0].Message)
+	})
+
+	t.Run("with a valid WithTitle option and an empty WithDescription option", func(t *testing.T) {
+		t.Parallel()
+
+		const testTitle = "Issue with a title and an empty description"
+
+		env, iss := issuetest.NewTestIssue(
+			t,
+			issue.WithTitle(testTitle),
+			issue.WithDescription(""),
+		)
+
+		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
+		require.NoError(t, err)
+		snap := bug.Snapshot()
+		assert.Len(t, snap.Operations, 1)
+		assert.Equal(t, testTitle, snap.Title)
+		assert.Len(t, snap.Comments, 1)
+		assert.Empty(t, snap.Comments[0].Message)
+	})
+
+	t.Run("with valid WithTitle and WithDescription options", func(t *testing.T) {
+		t.Parallel()
+
+		env, iss := issuetest.NewTestIssue(
+			t,
+			issue.WithTitle(testTitle),
+			issue.WithDescription(testDescription),
+		)
+
+		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
+		require.NoError(t, err)
+		snap := bug.Snapshot()
+		assert.Len(t, snap.Operations, 1)
+		assert.Equal(t, testTitle, snap.Title)
+		assert.Len(t, snap.Comments, 1)
+		assert.Equal(t, testDescription, snap.Comments[0].Message)
+	})
+
+	t.Run("with valid WithTitle, WithDescription and metadata options", func(t *testing.T) {
+		t.Parallel()
+
+		env, iss := issuetest.NewTestIssue(
+			t,
+			issue.WithTitle(testTitle),
+			issue.WithDescription(testDescription),
+			issue.WithPriority(issue.PriorityHigh),
+			issue.WithStatus(issue.StatusDraft),
+			issue.WithType(issue.TypeBug),
+		)
+
+		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
+		require.NoError(t, err)
+		snap := bug.Snapshot()
+		assert.Len(t, snap.Operations, 2)
+		assert.Equal(t, testTitle, snap.Title)
+		assert.Len(t, snap.Comments, 1)
+		assert.Equal(t, testDescription, snap.Comments[0].Message)
+		assert.Contains(t, mutableMetadata(t, bug), metadata.KeyPriority)
+		assert.Equal(t, issue.PriorityHigh.String(), mutableMetadata(t, bug)[metadata.KeyPriority])
+		assert.Contains(t, mutableMetadata(t, bug), metadata.KeyStatus)
+		assert.Equal(t, issue.StatusDraft.String(), mutableMetadata(t, bug)[metadata.KeyStatus])
+		assert.Contains(t, mutableMetadata(t, bug), metadata.KeyType)
+		assert.Equal(t, issue.TypeBug.String(), mutableMetadata(t, bug)[metadata.KeyType])
+	})
+}
+
+func TestIssue_Parent(t *testing.T) {
+	t.Run("Issue has no parent", func(t *testing.T) {
+		t.Parallel()
+
+		env, bugID, commentID := testenv.NewTestEnvAndBugWithComment(t)
+		_ = commentID
+
+		bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+		require.NoError(t, err)
+
+		iss, err := issue.Wrap(bug)
+		require.NoError(t, err)
+
+		_, err = iss.Parent()
+		require.ErrorIs(t, err, issue.ErrNoParent)
+	})
+
+	t.Run("Issue has a parent", func(t *testing.T) {
+		t.Parallel()
+
+		env, bugID, _ := testenv.NewTestEnvAndBugWithComment(t)
+		bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+		require.NoError(t, err)
+
+		_, err = bug.SetMetadata(bugID, map[string]string{"ax_parent": bugID.String()})
+		require.NoError(t, err)
+
+		iss, err := issue.Wrap(bug)
+		require.NoError(t, err)
+
+		issID, err := issue.NewID(bugID.String())
+		require.NoError(t, err)
+
+		parentID, err := iss.Parent()
+		require.NoError(t, err)
+		assert.Equal(t, issID, parentID)
+	})
+}
+
+func TestIssue_SetParent(t *testing.T) {
+	t.Parallel()
+
+	env, bugID, commentID := testenv.NewTestEnvAndBugWithComment(t)
+	_ = commentID
+
+	bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+	require.NoError(t, err)
+	require.NotContains(t, mutableMetadata(t, bug), metadata.KeyParent)
+
+	iss, err := issue.Wrap(bug)
+	require.NoError(t, err)
+	issID, err := issue.NewID(bugID.String())
+	require.NoError(t, err)
+
+	user, err := env.Backend.GetUserIdentity()
+	require.NoError(t, err)
+
+	iss.SetParent(issID)
+
+	require.NoError(t, iss.Commit(user))
+
+	updatedBug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+	require.NoError(t, err)
+	assert.Contains(t, mutableMetadata(t, updatedBug), metadata.KeyParent)
+}
+
+func mutableMetadata(t *testing.T, bugCache *cache.BugCache) map[string]string {
+	t.Helper()
+
+	metadata := map[string]string{}
+	for _, op := range bugCache.Snapshot().Operations {
+		metaOp, ok := op.(*dag.SetMetadataOperation[*bug.Snapshot])
+		if !ok {
+			continue
+		}
+
+		maps.Copy(metadata, metaOp.NewMetadata)
+	}
+
+	return metadata
+}

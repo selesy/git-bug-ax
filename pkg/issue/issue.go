@@ -1,72 +1,125 @@
 package issue
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/git-bug/git-bug/cache"
+	"github.com/git-bug/git-bug/commands/execenv"
 	"github.com/git-bug/git-bug/entities/bug"
 	"github.com/git-bug/git-bug/entities/identity"
-	"github.com/git-bug/git-bug/entity"
 	"github.com/git-bug/git-bug/entity/dag"
 	"github.com/selesy/git-bug-ax/internal/metadata"
 	"github.com/selesy/git-bug-ax/internal/types"
 )
 
-// BugInterface represents a bug entity interface for getting metadata
-type BugInterface interface {
-	Id() entity.Id
-	getSnapshot() *bug.Snapshot
-}
+const defaultDescription = `
+# {title}
+
+{Overview paragraph describing the purpose and context of this work.}
+
+## Scope
+
+- Brief description of what this task accomplishes
+- Boundaries of the work
+
+## Files Affected
+
+- pkg/api/handler.go
+- pkg/validate/rules.go
+
+## Environment
+
+- Details for reproducing the development environment
+- Required dependencies, environment variables, or secrets
+- Link to a devcontainer definition or Dockerfile
+
+## Implementation Notes
+
+- Use existing validator package
+- Add new validation rules for email format
+- Update handler to call validator before processing
+
+## Acceptance Criteria
+
+- [ ] All user inputs validated before processing
+- [ ] Invalid inputs return 400 with descriptive error
+- [ ] Unit tests cover new validation rules
+- [ ] Existing tests pass
+
+## Verification
+
+- ` + "`go test ./pkg/api -run TestUserValidation`" + `
+`
 
 // Issue wraps a git-bug bug with additional fields and options.
 type Issue struct {
-	bugIface  interface{}  // The original bug (either bug.Bug or cache.BugCache)
-	bugMeta   BugInterface // Interface for querying metadata
+	bug       *cache.BugCache
 	dirty     bool
 	mutations map[string]any
 	metadata  map[string]string
 }
 
-// bugCacheWrapper wraps cache.BugCache to implement BugInterface
-type bugCacheWrapper struct {
-	*cache.BugCache
+func Create(env *execenv.Env, opts ...Option) (*Issue, error) {
+	issWrap := newIssueWrapper(&Issue{})
+
+	var errs error
+	for _, opt := range opts {
+		if opt.newFN != nil {
+			errs = errors.Join(errs, opt.newFN(issWrap))
+		}
+	}
+
+	if errs != nil {
+		return nil, errs
+	}
+
+	if issWrap.createTitle == "" {
+		return nil, ErrNoTitle
+	}
+
+	// TODO: should we add a default description if one is not provided?
+	_ = defaultDescription
+
+	bug, _, err := env.Backend.Bugs().New(issWrap.createTitle, issWrap.createDescription)
+	if err != nil {
+		return nil, err
+	}
+
+	iss, err := Wrap(bug)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: can this be reused?
+	issWrap = newIssueWrapper(iss)
+
+	// var errs error
+	for _, opt := range opts {
+		if opt.newFN != nil {
+			continue
+		}
+
+		errs = errors.Join(errs, opt.fn(issWrap))
+	}
+
+	if errs != nil {
+		return nil, errs
+	}
+
+	return iss, nil
 }
 
-func (w *bugCacheWrapper) getSnapshot() *bug.Snapshot {
-	return w.Snapshot()
-}
-
-// bugBugWrapper wraps bug.Bug to implement BugInterface
-type bugBugWrapper struct {
-	*bug.Bug
-}
-
-func (w *bugBugWrapper) getSnapshot() *bug.Snapshot {
-	return w.Compile()
-}
-
-// Wrap creates a new Issue wrapper around a bug (can be either bug.Bug or cache.BugCache).
-func Wrap(b interface{}) (*Issue, error) {
+// Wrap creates a new Issue wrapper around a BugCache.
+func Wrap(b *cache.BugCache) (*Issue, error) {
 	if b == nil {
 		return nil, fmt.Errorf("bug cannot be nil")
 	}
 
-	var bugIf BugInterface
-
-	// Support both cache.BugCache and bug.Bug
-	switch v := b.(type) {
-	case *cache.BugCache:
-		bugIf = &bugCacheWrapper{v}
-	case *bug.Bug:
-		bugIf = &bugBugWrapper{v}
-	default:
-		return nil, fmt.Errorf("unsupported bug type: %T", b)
-	}
-
 	// Load existing metadata from the bug
 	metadata := make(map[string]string)
-	snap := bugIf.getSnapshot()
+	snap := b.Snapshot()
 	for _, op := range snap.Operations {
 		metaOp, ok := op.(*dag.SetMetadataOperation[*bug.Snapshot])
 		if !ok {
@@ -79,22 +132,32 @@ func Wrap(b interface{}) (*Issue, error) {
 	}
 
 	return &Issue{
-		bugIface:  b,
-		bugMeta:   bugIf,
+		bug:       b,
 		dirty:     false,
 		mutations: make(map[string]any),
 		metadata:  metadata,
 	}, nil
 }
 
+func (i *Issue) Update(opts ...Option) (*Issue, error) {
+	wrapper := newIssueWrapper(i)
+
+	var errs error
+	for _, opt := range opts {
+		errs = errors.Join(errs, opt.fn(wrapper))
+	}
+
+	return i, errs
+}
+
 func (i *Issue) ID() ID {
 	return ID{
-		Id: i.bugMeta.Id(),
+		Id: i.bug.Id(),
 	}
 }
 
 func (i *Issue) Operations() []dag.Operation {
-	return i.bugMeta.getSnapshot().Operations
+	return i.bug.Snapshot().Operations
 }
 
 // IsDirty returns true if the issue has been modified.
@@ -168,22 +231,13 @@ func (i *Issue) Type() Type {
 
 // SetTitle sets the title of the issue using the bug's SetTitle operation.
 func (i *Issue) SetTitle(title string) error {
-	switch bugVal := i.bugIface.(type) {
-	case *cache.BugCache:
-		_, err := bugVal.SetTitle(title)
-		return err
-	case *bug.Bug:
-		// For bug.Bug, we need to use the cache.SetTitle function or create the operation directly
-		// This assumes there's a helper function in cache or bug package
-		return fmt.Errorf("SetTitle not supported for bug.Bug directly; use BugCache instead")
-	default:
-		return fmt.Errorf("unsupported bug type: %T", i.bugIface)
-	}
+	_, err := i.bug.SetTitle(title)
+	return err
 }
 
 // Title returns the title of the issue from the bug snapshot.
 func (i *Issue) Title() string {
-	snap := i.bugMeta.getSnapshot()
+	snap := i.bug.Snapshot()
 	return snap.Title
 }
 
@@ -312,7 +366,7 @@ func (i *Issue) Resolution() Resolution {
 
 // Labels returns the current labels of the issue from the bug snapshot.
 func (i *Issue) Labels() types.Set[types.Label, *types.Label] {
-	snap := i.bugMeta.getSnapshot()
+	snap := i.bug.Snapshot()
 	result := make(types.Set[types.Label, *types.Label])
 	for _, label := range snap.Labels {
 		result.Add(types.Label(label.String()))
@@ -325,7 +379,7 @@ func (i *Issue) Labels() types.Set[types.Label, *types.Label] {
 // creates a LabelChangeOperation if changes are detected.
 func (i *Issue) SetLabels(newLabels types.Set[types.Label, *types.Label]) error {
 	// Get current labels from the bug snapshot and convert to case-insensitive map
-	snap := i.bugMeta.getSnapshot()
+	snap := i.bug.Snapshot()
 	currentLabelsLower := make(map[string]struct{})
 	for _, label := range snap.Labels {
 		currentLabelsLower[strings.ToLower(label.String())] = struct{}{}
@@ -363,15 +417,8 @@ func (i *Issue) SetLabels(newLabels types.Set[types.Label, *types.Label]) error 
 	}
 
 	// Apply the label changes to the bug
-	switch bugVal := i.bugIface.(type) {
-	case *cache.BugCache:
-		_, _, err := bugVal.ChangeLabels(added, removed)
-		return err
-	case *bug.Bug:
-		return fmt.Errorf("SetLabels not supported for bug.Bug directly; use BugCache instead")
-	default:
-		return fmt.Errorf("unsupported bug type: %T", i.bugIface)
-	}
+	_, _, err := i.bug.ChangeLabels(added, removed)
+	return err
 }
 
 // Commit saves the issue changes to the bug.
@@ -391,20 +438,15 @@ func (i *Issue) Commit(identity identity.Interface) error {
 		}
 	}
 
-	// Apply metadata to bug based on type
+	// Apply metadata to bug
 	if len(metadataMap) > 0 {
-		var err error
-		switch bugVal := i.bugIface.(type) {
-		case *cache.BugCache:
-			_, err = bugVal.SetMetadata(bugVal.Id(), metadataMap)
-		case *bug.Bug:
-			_, err = bug.SetMetadata(bugVal, identity, 0, bugVal.Id(), metadataMap)
-		default:
-			return fmt.Errorf("unsupported bug type in Commit: %T", i.bugIface)
-		}
-
+		_, err := i.bug.SetMetadata(i.bug.Id(), metadataMap)
 		if err != nil {
 			return fmt.Errorf("failed to set metadata: %w", err)
+		}
+		err = i.bug.Commit()
+		if err != nil {
+			return fmt.Errorf("failed to commit changes: %w", err)
 		}
 	}
 
@@ -413,34 +455,3 @@ func (i *Issue) Commit(identity identity.Interface) error {
 
 	return nil
 }
-
-// // MarshalJSON implements json.Marshaler.
-// func (i *Issue) MarshalJSON() ([]byte, error) {
-// 	v := i.View()
-// 	return json.Marshal(v)
-// }
-
-// // View returns a view struct for display purposes.
-// func (i *Issue) View() *IssueView {
-// 	return &IssueView{
-// 		ID:        i.bugMeta.Id(),
-// 		Priority:  i.Priority(),
-// 		Status:    i.Status(),
-// 		Type:      i.Type(),
-// 		Metadata:  i.metadata,
-// 		Mutations: i.mutations,
-// 	}
-// }
-
-// // IssueView represents the public view of an issue
-// type IssueView struct {
-// 	ID        entity.Id         `json:"id"`
-// 	Priority  Priority          `json:"priority"`
-// 	Status    Status            `json:"status"`
-// 	Type      Type              `json:"type"`
-// 	Metadata  map[string]string `json:"metadata"`
-// 	Mutations map[string]any    `json:"mutations"`
-// }
-
-// // TextCodec is an alias for types.TextCodec
-// type TextCodec = types.TextCodec
