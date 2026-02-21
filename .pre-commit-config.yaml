@@ -30,9 +30,21 @@ repos:
     - id: go-test-mod
     - id: golangci-lint-mod
     - id: my-cmd-repo
+      alias: gremlins
+      name: gremlins
+      args: ["bash", "-c", "go tool gremlins unleash"]
+    - id: my-cmd-repo
       alias: govulncheck
       name: govulncheck
-      args: ["bash", "-c", "go tool golang.org/x/vuln/cmd/govulncheck ./..."]
+      args: ["bash", "-c", "go tool govulncheck ./..."]
+    - id: my-cmd-repo
+      alias: lichen-build
+      name: lichen-build
+      args: ["bash", "-c", "go build -o ./bin/ax-lichen ."]
+    - id: my-cmd-repo
+      alias: lichen-check
+      name: lichen-check
+      args: ["bash", "-c", "go tool lichen ./bin/ax-lichen"]
 - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
   rev: v9.22.0
   hooks:

@@ -68,7 +68,7 @@ func TestCreate(t *testing.T) {
 		env, iss := issuetest.NewTestIssue(
 			t,
 			issue.WithTitle(testTitle),
-			issue.WithDescription(""),
+			issue.WithDescription(newTestDescription(t, "")),
 		)
 
 		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
@@ -86,7 +86,7 @@ func TestCreate(t *testing.T) {
 		env, iss := issuetest.NewTestIssue(
 			t,
 			issue.WithTitle(testTitle),
-			issue.WithDescription(testDescription),
+			issue.WithDescription(newTestDescription(t, testDescription)),
 		)
 
 		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
@@ -104,7 +104,7 @@ func TestCreate(t *testing.T) {
 		env, iss := issuetest.NewTestIssue(
 			t,
 			issue.WithTitle(testTitle),
-			issue.WithDescription(testDescription),
+			issue.WithDescription(newTestDescription(t, testDescription)),
 			issue.WithPriority(issue.PriorityHigh),
 			issue.WithStatus(issue.StatusDraft),
 			issue.WithType(issue.TypeBug),
@@ -206,4 +206,13 @@ func mutableMetadata(t *testing.T, bugCache *cache.BugCache) map[string]string {
 	}
 
 	return metadata
+}
+
+func newTestDescription(t *testing.T, description string) issue.Description {
+	t.Helper()
+
+	var d issue.Description
+	require.NoError(t, (&d).UnmarshalText([]byte(description)))
+
+	return d
 }

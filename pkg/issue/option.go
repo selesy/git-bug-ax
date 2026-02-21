@@ -7,14 +7,14 @@ import (
 type issueWrapper struct {
 	i                 *Issue
 	createTitle       string
-	createDescription string
+	createDescription Description
 }
 
 func newIssueWrapper(iss *Issue) *issueWrapper {
 	return &issueWrapper{
 		i:                 iss,
 		createTitle:       "",
-		createDescription: "",
+		createDescription: Description{description: ""},
 	}
 }
 
@@ -34,12 +34,10 @@ func WithBlocks(blocks types.Set[ID, *ID]) Option {
 }
 
 // WithTitle creates an option that sets the title.
-func WithDescription(description string) Option {
+func WithDescription(description Description) Option {
 	return Option{
 		fn: func(i *issueWrapper) error {
-			i.createDescription = description
-			// return i.i.SetDescription(description) // TODO
-			return nil
+			return i.i.SetDescription(description)
 		},
 		newFN: func(i *issueWrapper) error {
 			i.createDescription = description

@@ -82,7 +82,7 @@ func Create(env *execenv.Env, opts ...Option) (*Issue, error) {
 	// TODO: should we add a default description if one is not provided?
 	_ = defaultDescription
 
-	bug, _, err := env.Backend.Bugs().New(issWrap.createTitle, issWrap.createDescription)
+	bug, _, err := env.Backend.Bugs().New(issWrap.createTitle, issWrap.createDescription.description)
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +239,23 @@ func (i *Issue) SetTitle(title string) error {
 func (i *Issue) Title() string {
 	snap := i.bug.Snapshot()
 	return snap.Title
+}
+
+// Description returns the "body" of the issue
+func (i *Issue) Description() Description {
+	comments := i.bug.Snapshot().Comments
+	if len(comments) < 1 {
+		return Description{description: ""}
+	}
+
+	return Description{description: comments[0].Message}
+}
+
+// SetDescription sets the issue's description (first comment)
+func (i *Issue) SetDescription(description Description) error {
+	_, _, err := i.bug.EditCreateComment(description.description)
+
+	return err
 }
 
 // SetBlocks sets the blocks relationship.
@@ -439,7 +456,7 @@ func (i *Issue) Commit(identity identity.Interface) error {
 	}
 
 	// Apply metadata to bug
-	if len(metadataMap) > 0 {
+	if len(metadataMap) != 0 {
 		_, err := i.bug.SetMetadata(i.bug.Id(), metadataMap)
 		if err != nil {
 			return fmt.Errorf("failed to set metadata: %w", err)
