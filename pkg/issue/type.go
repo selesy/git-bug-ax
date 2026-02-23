@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/types"
+	"github.com/selesy/git-bug-ax/internal/codec"
 )
 
 // Type represents the type of an issue.
@@ -101,7 +101,7 @@ func (t Type) String() string {
 }
 
 // Verify that Type implements TextCodec.
-var _ types.TextCodec = (*Type)(nil)
+var _ codec.TextCodec = (*Type)(nil)
 
 // ParseType returns a Type from a string, or an error if the string is invalid.
 // Valid values are: "epic", "feature", "task", "bug", "spike", "tech-debt", "fix",

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/types"
+	"github.com/selesy/git-bug-ax/internal/codec"
 )
 
 // Priority represents the priority level of an issue.
@@ -57,7 +57,7 @@ func (p Priority) String() string {
 }
 
 // Verify that Priority implements TextCodec.
-var _ types.TextCodec = (*Priority)(nil)
+var _ codec.TextCodec = (*Priority)(nil)
 
 // ParsePriority returns a Priority from a string, or an error if the string is invalid.
 // Valid values are: "highest", "high", "medium", "low", "lowest" (case-insensitive).

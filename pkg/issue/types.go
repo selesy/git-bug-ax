@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/git-bug/git-bug/entity"
-	"github.com/selesy/git-bug-ax/internal/types"
+	"github.com/selesy/git-bug-ax/internal/codec"
 )
 
 // ID wraps git-bug's entity.Id and implements TextCodec for
@@ -15,7 +15,7 @@ type ID struct {
 	entity.Id
 }
 
-var _ types.TextCodec = (*ID)(nil)
+var _ codec.TextCodec = (*ID)(nil)
 
 // NewID creates an ID from a full 64-character hex hash.
 // It accepts both uppercase and lowercase hex characters,

@@ -1,8 +1,8 @@
 package issue
 
-import "github.com/selesy/git-bug-ax/internal/types"
+import "github.com/selesy/git-bug-ax/internal/codec"
 
-var _ types.TextCodec = (*Description)(nil)
+var _ codec.TextCodec = (*Description)(nil)
 
 type Description struct {
 	// TODO: this is a placeholder for Markdown but we'll need to parse sections later

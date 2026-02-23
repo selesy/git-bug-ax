@@ -1,7 +1,8 @@
 package issue
 
 import (
-	"github.com/selesy/git-bug-ax/internal/types"
+	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-ax/internal/collections"
 )
 
 type issueWrapper struct {
@@ -25,7 +26,7 @@ type Option struct {
 }
 
 // WithBlocks creates an option that sets the blocks relationship.
-func WithBlocks(blocks types.Set[ID, *ID]) Option {
+func WithBlocks(blocks collections.Set[ID, *ID]) Option {
 	return Option{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetBlocks(blocks)
@@ -58,7 +59,7 @@ func WithDiscoverer(id ID) Option {
 }
 
 // WithLabels creates an option that sets the labels.
-func WithLabels(labels types.Set[types.Label, *types.Label]) Option {
+func WithLabels(labels collections.Set[codec.Label, *codec.Label]) Option {
 	return Option{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetLabels(labels)
@@ -87,7 +88,7 @@ func WithPriority(p Priority) Option {
 }
 
 // WithReferences creates an option that sets the references relationship.
-func WithReferences(references types.Set[ID, *ID]) Option {
+func WithReferences(references collections.Set[ID, *ID]) Option {
 	return Option{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetReferences(references)

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/selesy/git-bug-ax/pkg/cli"
+	"github.com/selesy/git-bug-ax/internal/cli"
 )
 
 func main() {

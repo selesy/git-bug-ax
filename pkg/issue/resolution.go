@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/types"
+	"github.com/selesy/git-bug-ax/internal/codec"
 )
 
 // Resolution represents the resolution of an issue.
@@ -57,7 +57,7 @@ func (r Resolution) String() string {
 }
 
 // Verify that Resolution implements TextCodec.
-var _ types.TextCodec = (*Resolution)(nil)
+var _ codec.TextCodec = (*Resolution)(nil)
 
 // ParseResolution returns a Resolution from a string, or an error if the string is invalid.
 // Valid values are: "fixed", "wont-fix", "duplicate", "cannot-repro", "not-needed"

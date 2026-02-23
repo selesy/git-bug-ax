@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/types"
+	"github.com/selesy/git-bug-ax/internal/codec"
 )
 
 // Status represents the status of an issue.
@@ -89,7 +89,7 @@ func (s Status) String() string {
 }
 
 // Verify that Status implements TextCodec.
-var _ types.TextCodec = (*Status)(nil)
+var _ codec.TextCodec = (*Status)(nil)
 
 // ParseStatus returns a Status from a string, or an error if the string is invalid.
 // Valid values are: "draft", "ready", "claimed", "in-progress", "blocked", "review",
