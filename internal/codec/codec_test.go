@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestLabel_MarshalUnmarshalText tests Label TextCodec round-trip.
@@ -13,45 +15,29 @@ func TestLabel_MarshalUnmarshalText(t *testing.T) {
 
 	// Marshal to text
 	data, err := original.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if string(data) != string(original) {
-		t.Errorf("MarshalText mismatch: %s != %s", string(data), string(original))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, string(original), string(data))
 
 	// Unmarshal from text
 	var label codec.Label
 	err = label.UnmarshalText(data)
-	if err != nil {
-		t.Fatalf("UnmarshalText error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify round-trip
-	if label != original {
-		t.Errorf("Round-trip failed: %s != %s", label, original)
-	}
+	assert.Equal(t, original, label)
 }
 
 // TestLabel_EmptyString tests Label with empty string.
 func TestLabel_EmptyString(t *testing.T) {
 	label := codec.Label("")
 	data, err := label.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if len(data) != 0 {
-		t.Errorf("Empty label should marshal to empty bytes, got: %s", string(data))
-	}
+	require.NoError(t, err)
+	assert.Empty(t, data)
 
 	var label2 codec.Label
 	err = label2.UnmarshalText(data)
-	if err != nil {
-		t.Fatalf("UnmarshalText error: %v", err)
-	}
-	if label2 != "" {
-		t.Errorf("Unmarshaled empty label should be empty, got: %q", label2)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, codec.Label(""), label2)
 }
 
 // TestLabel_TextCodec verifies Label implements TextCodec.
@@ -74,19 +60,13 @@ func TestLabel_SpecialCharacters(t *testing.T) {
 		t.Run(tc, func(t *testing.T) {
 			label := codec.Label(tc)
 			data, err := label.MarshalText()
-			if err != nil {
-				t.Fatalf("MarshalText error: %v", err)
-			}
+			require.NoError(t, err)
 
 			var label2 codec.Label
 			err = label2.UnmarshalText(data)
-			if err != nil {
-				t.Fatalf("UnmarshalText error: %v", err)
-			}
+			require.NoError(t, err)
 
-			if label2 != label {
-				t.Errorf("Round-trip failed: %q != %q", label2, label)
-			}
+			assert.Equal(t, label, label2)
 		})
 	}
 }

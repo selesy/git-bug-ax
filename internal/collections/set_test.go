@@ -5,6 +5,8 @@ import (
 
 	"github.com/selesy/git-bug-ax/internal/codec"
 	"github.com/selesy/git-bug-ax/internal/collections"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestSet_Add tests Set.Add method.
@@ -25,17 +27,13 @@ func TestSet_Contains(t *testing.T) {
 	label := codec.Label("test")
 
 	// Element not yet in set
-	if s.Contains(label) {
-		t.Error("Contains should return false for element not in set")
-	}
+	assert.False(t, s.Contains(label))
 
 	// Add element
 	s.Add(label)
 
 	// Element should now be in set
-	if !s.Contains(label) {
-		t.Error("Contains should return true for element in set")
-	}
+	assert.True(t, s.Contains(label))
 }
 
 // TestSet_Remove tests Set.Remove method.
@@ -45,15 +43,11 @@ func TestSet_Remove(t *testing.T) {
 
 	// Add element
 	s.Add(label)
-	if !s.Contains(label) {
-		t.Fatal("Failed to add element to set")
-	}
+	require.True(t, s.Contains(label))
 
 	// Remove element
 	s.Remove(label)
-	if s.Contains(label) {
-		t.Error("Contains should return false after Remove")
-	}
+	assert.False(t, s.Contains(label))
 
 	// Removing non-existent element should not error
 	s.Remove(label)
@@ -68,29 +62,19 @@ func TestSet_MarshalUnmarshalText(t *testing.T) {
 
 	// Marshal to text
 	data, err := s.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if len(data) == 0 {
-		t.Error("MarshalText returned empty bytes for non-empty set")
-	}
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
 
 	// Unmarshal from text
 	var s2 collections.Set[codec.Label, *codec.Label]
 	err = s2.UnmarshalText(data)
-	if err != nil {
-		t.Fatalf("UnmarshalText error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify all elements are present
-	if len(s) != len(s2) {
-		t.Errorf("Round-trip length mismatch: %d != %d", len(s), len(s2))
-	}
+	assert.Len(t, s2, len(s))
 
 	for label := range s {
-		if !s2.Contains(label) {
-			t.Errorf("Round-trip failed: element %q missing in s2", label)
-		}
+		assert.True(t, s2.Contains(label))
 	}
 }
 
@@ -98,21 +82,13 @@ func TestSet_MarshalUnmarshalText(t *testing.T) {
 func TestSet_EmptyMarshaling(t *testing.T) {
 	s := make(collections.Set[codec.Label, *codec.Label])
 	data, err := s.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if len(data) != 0 {
-		t.Errorf("Empty set should marshal to empty bytes, got: %s", string(data))
-	}
+	require.NoError(t, err)
+	assert.Empty(t, data)
 
 	var s2 collections.Set[codec.Label, *codec.Label]
 	err = s2.UnmarshalText(data)
-	if err != nil {
-		t.Fatalf("UnmarshalText error: %v", err)
-	}
-	if len(s2) != 0 {
-		t.Errorf("Unmarshaled empty set should be empty, got length: %d", len(s2))
-	}
+	require.NoError(t, err)
+	assert.Empty(t, s2)
 }
 
 // TestSet_SetMultipleOperations tests multiple operations on Set.
@@ -124,29 +100,22 @@ func TestSet_SetMultipleOperations(t *testing.T) {
 	for _, label := range labels {
 		s.Add(label)
 	}
-	if len(s) != 5 {
-		t.Fatalf("Expected 5 elements, got %d", len(s))
-	}
+	require.Len(t, s, 5)
 
 	// Verify all are present
 	for _, label := range labels {
-		if !s.Contains(label) {
-			t.Errorf("Set should contain %q", label)
-		}
+		assert.True(t, s.Contains(label))
 	}
 
 	// Remove some elements
 	s.Remove(codec.Label("a"))
 	s.Remove(codec.Label("c"))
-	if len(s) != 3 {
-		t.Fatalf("After removing 2 elements, expected 3, got %d", len(s))
-	}
+	require.Len(t, s, 3)
 
 	// Verify correct elements remain
-	if s.Contains(codec.Label("a")) || s.Contains(codec.Label("c")) {
-		t.Error("Removed elements should not be in set")
-	}
-	if !s.Contains(codec.Label("b")) || !s.Contains(codec.Label("d")) || !s.Contains(codec.Label("e")) {
-		t.Error("Remaining elements should be in set")
-	}
+	assert.False(t, s.Contains(codec.Label("a")))
+	assert.False(t, s.Contains(codec.Label("c")))
+	assert.True(t, s.Contains(codec.Label("b")))
+	assert.True(t, s.Contains(codec.Label("d")))
+	assert.True(t, s.Contains(codec.Label("e")))
 }

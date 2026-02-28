@@ -2,10 +2,11 @@ package entity_test
 
 import (
 	"encoding"
-	"strings"
 	"testing"
 
 	"github.com/selesy/git-bug-ax/internal/entity"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewID_ValidHexHash tests NewID with valid hex hashes.
@@ -27,12 +28,8 @@ func TestNewID_ValidHexHash(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			id, err := entity.NewID(tt.hash)
-			if err != nil {
-				t.Fatalf("NewID(%q) error = %v, want nil", tt.hash, err)
-			}
-			if id.String() == "" {
-				t.Error("NewID returned empty ID")
-			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, id.String())
 		})
 	}
 }
@@ -56,9 +53,7 @@ func TestNewID_InvalidHexHash(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			_, err := entity.NewID(tt.hash)
-			if err == nil {
-				t.Errorf("NewID(%q) error = nil, want error", tt.hash)
-			}
+			require.Error(t, err)
 		})
 	}
 }
@@ -67,30 +62,20 @@ func TestNewID_InvalidHexHash(t *testing.T) {
 func TestID_MarshalUnmarshalText(t *testing.T) {
 	originalHash := "abcd1234567890abcd1234567890abcd1234567890abcd1234567890abcd1234"
 	id, err := entity.NewID(originalHash)
-	if err != nil {
-		t.Fatalf("NewID error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Marshal to text
 	data, err := id.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if len(data) == 0 {
-		t.Error("MarshalText returned empty bytes")
-	}
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
 
 	// Unmarshal from text
 	var id2 entity.ID
 	err = id2.UnmarshalText(data)
-	if err != nil {
-		t.Fatalf("UnmarshalText error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify round-trip
-	if id.String() != id2.String() {
-		t.Errorf("Round-trip failed: %s != %s", id.String(), id2.String())
-	}
+	assert.Equal(t, id.String(), id2.String())
 }
 
 // TestID_TextCodec verifies ID implements TextCodec.
@@ -117,31 +102,21 @@ func TestIDs_MarshalUnmarshalText(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var ids entity.IDs
 			err := ids.UnmarshalText([]byte(tt.input))
-			if err != nil {
-				t.Fatalf("UnmarshalText error: %v", err)
-			}
+			require.NoError(t, err)
 
 			// Marshal back
 			data, err := ids.MarshalText()
-			if err != nil {
-				t.Fatalf("MarshalText error: %v", err)
-			}
+			require.NoError(t, err)
 
 			// Unmarshal again and verify
 			var ids2 entity.IDs
 			err = ids2.UnmarshalText(data)
-			if err != nil {
-				t.Fatalf("UnmarshalText (round-trip) error: %v", err)
-			}
+			require.NoError(t, err)
 
-			if len(ids) != len(ids2) {
-				t.Errorf("Round-trip length mismatch: %d != %d", len(ids), len(ids2))
-			}
+			assert.Len(t, ids2, len(ids))
 
 			for i := range ids {
-				if ids[i].String() != ids2[i].String() {
-					t.Errorf("Round-trip ID mismatch at index %d: %s != %s", i, ids[i].String(), ids2[i].String())
-				}
+				assert.Equal(t, ids[i].String(), ids2[i].String())
 			}
 		})
 	}
@@ -150,52 +125,35 @@ func TestIDs_MarshalUnmarshalText(t *testing.T) {
 // TestIDs_Multiple tests IDs with multiple values.
 func TestIDs_Multiple(t *testing.T) {
 	id1, err := entity.NewID("abcd1234567890abcd1234567890abcd1234567890abcd1234567890abcd1234")
-	if err != nil {
-		t.Fatalf("NewID error: %v", err)
-	}
+	require.NoError(t, err)
 
 	id2, err := entity.NewID("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210")
-	if err != nil {
-		t.Fatalf("NewID error: %v", err)
-	}
+	require.NoError(t, err)
 
 	ids := entity.IDs{id1, id2}
 
 	// Marshal to text
 	data, err := ids.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if !strings.Contains(string(data), ",") {
-		t.Error("Multiple IDs should be comma-separated")
-	}
+	require.NoError(t, err)
+	assert.Contains(t, string(data), ",")
 
 	// Unmarshal from text
 	var ids2 entity.IDs
 	err = ids2.UnmarshalText(data)
-	if err != nil {
-		t.Fatalf("UnmarshalText error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify
-	if len(ids2) != 2 {
-		t.Errorf("Expected 2 IDs, got %d", len(ids2))
-	}
-	if ids2[0].String() != id1.String() || ids2[1].String() != id2.String() {
-		t.Error("Round-trip mismatch for multiple IDs")
-	}
+	assert.Len(t, ids2, 2)
+	assert.Equal(t, id1.String(), ids2[0].String())
+	assert.Equal(t, id2.String(), ids2[1].String())
 }
 
 // TestIDs_EmptyMarshaling tests marshaling empty IDs.
 func TestIDs_EmptyMarshaling(t *testing.T) {
 	var ids entity.IDs
 	data, err := ids.MarshalText()
-	if err != nil {
-		t.Fatalf("MarshalText error: %v", err)
-	}
-	if len(data) != 0 {
-		t.Errorf("Empty IDs should marshal to empty bytes, got: %s", string(data))
-	}
+	require.NoError(t, err)
+	assert.Empty(t, data)
 }
 
 // TestIDs_InvalidMarshaling tests unmarshaling invalid IDs.
@@ -209,9 +167,7 @@ func TestIDs_InvalidMarshaling(t *testing.T) {
 		t.Run(input, func(t *testing.T) {
 			var ids entity.IDs
 			err := ids.UnmarshalText([]byte(input))
-			if err == nil {
-				t.Errorf("UnmarshalText(%q) error = nil, want error", input)
-			}
+			require.Error(t, err)
 		})
 	}
 }
