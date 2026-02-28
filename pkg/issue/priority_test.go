@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/selesy/git-bug-ax/pkg/issue"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPriorityConstants(t *testing.T) {
@@ -21,9 +23,7 @@ func TestPriorityConstants(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.priority.String(); got != tt.expected {
-				t.Errorf("String() = %q, want %q", got, tt.expected)
-			}
+			assert.Equal(t, tt.expected, tt.priority.String())
 		})
 	}
 }
@@ -44,13 +44,8 @@ func TestPriorityMarshalText(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := tt.priority.MarshalText()
-			if err != nil {
-				t.Errorf("MarshalText() error = %v", err)
-				return
-			}
-			if got := string(data); got != tt.expected {
-				t.Errorf("MarshalText() = %q, want %q", got, tt.expected)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, string(data))
 		})
 	}
 }
@@ -74,13 +69,12 @@ func TestPriorityUnmarshalText(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var got issue.Priority
 			err := got.UnmarshalText([]byte(tt.input))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalText() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if !tt.wantErr && got != tt.want {
-				t.Errorf("UnmarshalText() = %v, want %v", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -103,13 +97,12 @@ func TestParsePriority(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := issue.ParsePriority(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParsePriority() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if !tt.wantErr && got != tt.want {
-				t.Errorf("ParsePriority() = %v, want %v", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -120,11 +113,11 @@ func TestPriorityRoundTrip(t *testing.T) {
 		issue.PriorityMedium, issue.PriorityLow, issue.PriorityLowest,
 	}
 	for _, orig := range originals {
-		data, _ := orig.MarshalText()
+		data, err := orig.MarshalText()
+		require.NoError(t, err)
 		var restored issue.Priority
-		_ = restored.UnmarshalText(data)
-		if restored != orig {
-			t.Errorf("Priority round-trip failed: %v != %v", restored, orig)
-		}
+		err = restored.UnmarshalText(data)
+		require.NoError(t, err)
+		assert.Equal(t, orig, restored)
 	}
 }

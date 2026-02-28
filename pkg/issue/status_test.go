@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/selesy/git-bug-ax/pkg/issue"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStatusConstants(t *testing.T) {
@@ -29,9 +31,7 @@ func TestStatusConstants(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.status.String(); got != tt.want {
-				t.Errorf("String() = %q, want %q", got, tt.want)
-			}
+			assert.Equal(t, tt.want, tt.status.String())
 		})
 	}
 }
@@ -50,13 +50,8 @@ func TestStatusMarshalText(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := tt.status.MarshalText()
-			if err != nil {
-				t.Errorf("MarshalText() error = %v", err)
-				return
-			}
-			if got := string(data); got != tt.want {
-				t.Errorf("MarshalText() = %q, want %q", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, string(data))
 		})
 	}
 }
@@ -79,13 +74,12 @@ func TestStatusUnmarshalText(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var got issue.Status
 			err := got.UnmarshalText([]byte(tt.input))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalText() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if !tt.wantErr && got != tt.want {
-				t.Errorf("UnmarshalText() = %v, want %v", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -107,13 +101,12 @@ func TestParseStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := issue.ParseStatus(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseStatus() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.Error(t, err)
 				return
 			}
-			if !tt.wantErr && got != tt.want {
-				t.Errorf("ParseStatus() = %v, want %v", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -124,11 +117,11 @@ func TestStatusRoundTrip(t *testing.T) {
 		issue.StatusInProgress, issue.StatusBlocked,
 	}
 	for _, orig := range originals {
-		data, _ := orig.MarshalText()
+		data, err := orig.MarshalText()
+		require.NoError(t, err)
 		var restored issue.Status
-		_ = restored.UnmarshalText(data)
-		if restored != orig {
-			t.Errorf("Status round-trip failed: %v != %v", restored, orig)
-		}
+		err = restored.UnmarshalText(data)
+		require.NoError(t, err)
+		assert.Equal(t, orig, restored)
 	}
 }

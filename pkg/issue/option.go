@@ -15,7 +15,7 @@ func newIssueWrapper(iss *Issue) *issueWrapper {
 	return &issueWrapper{
 		i:                 iss,
 		createTitle:       "",
-		createDescription: Description{description: ""},
+		createDescription: Description{sections: make(map[Section][]string)},
 	}
 }
 

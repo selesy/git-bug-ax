@@ -15,10 +15,7 @@ import (
 	"github.com/selesy/git-bug-ax/internal/metadata"
 )
 
-const defaultDescription = `
-# {title}
-
-{Overview paragraph describing the purpose and context of this work.}
+const defaultDescription = `{Overview paragraph describing the purpose and context of this work.}
 
 ## Scope
 
@@ -84,7 +81,7 @@ func Create(env *execenv.Env, opts ...Option) (*Issue, error) {
 	// TODO: should we add a default description if one is not provided?
 	_ = defaultDescription
 
-	bug, _, err := env.Backend.Bugs().New(issWrap.createTitle, issWrap.createDescription.description)
+	bug, _, err := env.Backend.Bugs().New(issWrap.createTitle, issWrap.createDescription.Raw())
 	if err != nil {
 		return nil, err
 	}
@@ -176,16 +173,16 @@ func (i *Issue) SetBlocks(blocks collections.Set[ID, *ID]) error {
 // Description returns the "body" of the issue
 func (i *Issue) Description() Description {
 	comments := i.bug.Snapshot().Comments
-	if len(comments) < 1 {
-		return Description{description: ""}
+	desc := Description{sections: make(map[Section][]string)}
+	if len(comments) >= 1 {
+		_ = desc.UnmarshalText([]byte(comments[0].Message))
 	}
-
-	return Description{description: comments[0].Message}
+	return desc
 }
 
 // SetDescription sets the issue's description (first comment)
 func (i *Issue) SetDescription(description Description) error {
-	_, _, err := i.bug.EditCreateComment(description.description)
+	_, _, err := i.bug.EditCreateComment(description.Raw())
 
 	return err
 }
@@ -200,7 +197,7 @@ func (i *Issue) Discoverer() (ID, error) {
 	if d, exists := i.metadata[metadata.KeyDiscoverer]; exists {
 		return NewID(d)
 	}
-	return ID{}, fmt.Errorf("no discoverer set")
+	return ID{}, ErrNoDiscoverer
 }
 
 // SetDiscoverer sets the discoverer identity.
