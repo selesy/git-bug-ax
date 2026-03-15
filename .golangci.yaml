@@ -1,6 +1,6 @@
 version: "2"
 run:
-  go: "1.24"
+  go: "1.26"
   modules-download-mode: readonly
 linters:
   enable:
@@ -31,7 +31,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - "github.com/git-bug/git-bug-ax"
+        - "github.com/selesy/git-bug-ax"
   exclusions:
     generated: lax
     paths:
