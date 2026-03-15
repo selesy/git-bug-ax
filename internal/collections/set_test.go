@@ -3,10 +3,11 @@ package collections_test
 import (
 	"testing"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
-	"github.com/selesy/git-bug-ax/internal/collections"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-ax/internal/collections"
 )
 
 // TestSet_Add tests Set.Add method.

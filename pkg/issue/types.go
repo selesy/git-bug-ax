@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/git-bug/git-bug/entity"
+
 	"github.com/selesy/git-bug-ax/internal/codec"
 )
 

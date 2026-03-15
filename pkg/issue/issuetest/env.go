@@ -6,8 +6,9 @@ import (
 	"github.com/git-bug/git-bug/commands/bug/testenv"
 	"github.com/git-bug/git-bug/commands/execenv"
 	"github.com/git-bug/git-bug/entity"
-	"github.com/selesy/git-bug-ax/pkg/issue"
 	"github.com/stretchr/testify/require"
+
+	"github.com/selesy/git-bug-ax/pkg/issue"
 )
 
 func NewEnv(t *testing.T) (*execenv.Env, entity.Id) {

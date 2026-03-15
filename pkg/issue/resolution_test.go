@@ -3,9 +3,10 @@ package issue_test
 import (
 	"testing"
 
-	"github.com/selesy/git-bug-ax/pkg/issue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/selesy/git-bug-ax/pkg/issue"
 )
 
 func TestResolutionConstants(t *testing.T) {

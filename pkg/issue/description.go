@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
+
+	"github.com/selesy/git-bug-ax/internal/codec"
 )
 
 var _ codec.TextCodec = (*Description)(nil)
@@ -348,7 +349,7 @@ func (d *Description) reassembleMarkdown() string {
 						heading = denormalizeSection(string(section))
 					}
 
-					buf.WriteString(fmt.Sprintf("## %s\n\n", heading))
+					fmt.Fprintf(&buf, "## %s\n\n", heading)
 					for _, line := range content {
 						buf.WriteString(line)
 						if !strings.HasSuffix(line, "\n") {

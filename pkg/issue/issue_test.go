@@ -8,11 +8,12 @@ import (
 	"github.com/git-bug/git-bug/commands/bug/testenv"
 	"github.com/git-bug/git-bug/entities/bug"
 	"github.com/git-bug/git-bug/entity/dag"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/selesy/git-bug-ax/internal/metadata"
 	"github.com/selesy/git-bug-ax/pkg/issue"
 	"github.com/selesy/git-bug-ax/pkg/issue/issuetest"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCreate(t *testing.T) {
