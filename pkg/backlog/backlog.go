@@ -1,4 +1,4 @@
-package ax
+package backlog
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 // 	Remove(entity.Id) error
 // }
 
-type Backlog struct {
+type Index struct {
 	// Git-bug
 	repo    repository.ClockedRepo
 	backend *cache.RepoCache
@@ -32,7 +32,7 @@ type Backlog struct {
 	span   trace.Span
 }
 
-func New(ctx context.Context, opts ...Option) (*Backlog, error) {
+func New(ctx context.Context, opts ...Option) (*Index, error) {
 	var err error
 
 	cfg, err := newConfig(ctx, opts...)
@@ -51,7 +51,7 @@ func New(ctx context.Context, opts ...Option) (*Backlog, error) {
 		return nil, err
 	}
 
-	b := &Backlog{
+	b := &Index{
 		repo:   repo,
 		logger: cfg.otel.Logger(),
 		tracer: cfg.otel.Tracer(),
@@ -85,7 +85,7 @@ func New(ctx context.Context, opts ...Option) (*Backlog, error) {
 	return b, nil
 }
 
-func (b *Backlog) Close() error {
+func (b *Index) Close() error {
 	var err error
 
 	switch {
@@ -108,7 +108,7 @@ func (b *Backlog) Close() error {
 	return err
 }
 
-func (b *Backlog) Resolve(id entity.Id) (*issue.Issue, error) {
+func (b *Index) Resolve(id entity.Id) (*issue.Issue, error) {
 	bug, err := b.backend.Bugs().Resolve(id)
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (b *Backlog) Resolve(id entity.Id) (*issue.Issue, error) {
 	return issue.Wrap(bug)
 }
 
-func (b *Backlog) ResolvePrefix(prefix string) (*issue.Issue, error) {
+func (b *Index) ResolvePrefix(prefix string) (*issue.Issue, error) {
 	// TODO: check for backend
 
 	bug, err := b.backend.Bugs().ResolvePrefix(prefix)

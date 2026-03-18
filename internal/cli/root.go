@@ -15,8 +15,8 @@ func Execute() (err error) {
 
 	defer func() {
 
-		if cfg.backlog != nil {
-			err = errors.Join(err, cfg.backlog.Close())
+		if cfg.index != nil {
+			err = errors.Join(err, cfg.index.Close())
 		}
 
 		if err != nil {

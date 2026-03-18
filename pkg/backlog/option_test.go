@@ -1,4 +1,4 @@
-package ax
+package backlog
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/selesy/git-bug-ax/pkg/ax/axtest"
+	"github.com/selesy/git-bug-ax/pkg/backlog/backlogtest"
 )
 
 func TestNewConfigDefaults(t *testing.T) {
@@ -111,7 +111,7 @@ func TestNewConfigNoBackendWithEventConsumer(t *testing.T) {
 		return nil
 	}
 
-	logger, buf := axtest.DeterministicLogger(t)
+	logger, buf := backlogtest.DeterministicLogger(t)
 
 	// This should set noBackend=true and the consumer, but log a warning
 	cfg, err := newConfig(ctx,

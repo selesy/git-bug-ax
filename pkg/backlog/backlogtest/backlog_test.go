@@ -1,4 +1,4 @@
-package axtest_test
+package backlogtest_test
 
 import (
 	"errors"
@@ -10,14 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/pkg/ax/axtest"
+	"github.com/selesy/git-bug-ax/pkg/backlog/backlogtest"
 )
 
 func TestNew(t *testing.T) {
 	t.Parallel()
 
 	t.Run("with additional path elements", func(t *testing.T) {
-		path := axtest.NewRepo(t, axtest.WithSubdirCount(5))
+		path := backlogtest.NewRepo(t, backlogtest.WithSubdirCount(5))
 		require.True(t, strings.HasSuffix(path, "/a/b/c/d/e"))
 	})
 
@@ -27,11 +27,11 @@ func TestNew(t *testing.T) {
 		t.Run("multiple identities and issues", func(t *testing.T) {
 			t.Parallel()
 
-			path := axtest.NewRepo(
+			path := backlogtest.NewRepo(
 				t,
 				// The order of thesee options matter to verify the identity count isn't overwritten
-				axtest.WithIdentityCount(5),
-				axtest.WithIssueCount(20),
+				backlogtest.WithIdentityCount(5),
+				backlogtest.WithIssueCount(20),
 			)
 
 			assertRefCount(t, filepath.Join(path, ".git", "refs", "bugs"), 20)
@@ -41,10 +41,10 @@ func TestNew(t *testing.T) {
 		t.Run("identity requested for issue creation", func(t *testing.T) {
 			t.Parallel()
 
-			path := axtest.NewRepo(
+			path := backlogtest.NewRepo(
 				t,
-				axtest.WithIssueCount(20),
-				axtest.WithIdentityCount(1),
+				backlogtest.WithIssueCount(20),
+				backlogtest.WithIdentityCount(1),
 			)
 
 			assertRefCount(t, filepath.Join(path, ".git", "refs", "bugs"), 20)
@@ -54,7 +54,7 @@ func TestNew(t *testing.T) {
 		t.Run("no identity for issue creation", func(t *testing.T) {
 			t.Parallel()
 
-			path := axtest.NewRepo(t, axtest.WithIssueCount(20))
+			path := backlogtest.NewRepo(t, backlogtest.WithIssueCount(20))
 
 			assertRefCount(t, filepath.Join(path, ".git", "refs", "bugs"), 20)
 			assertRefCount(t, filepath.Join(path, ".git", "refs", "identities"), 1)
@@ -63,7 +63,7 @@ func TestNew(t *testing.T) {
 		t.Run("no identities or issues", func(t *testing.T) {
 			t.Parallel()
 
-			path := axtest.NewRepo(t)
+			path := backlogtest.NewRepo(t)
 
 			assertRefCount(t, filepath.Join(path, ".git", "refs", "bugs"), 0)
 			assertRefCount(t, filepath.Join(path, ".git", "refs", "identities"), 0)

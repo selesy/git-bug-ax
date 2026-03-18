@@ -1,4 +1,4 @@
-package ax_test
+package backlog_test
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 
 	"github.com/selesy/deterministic"
 
-	"github.com/selesy/git-bug-ax/pkg/ax"
-	"github.com/selesy/git-bug-ax/pkg/ax/axtest"
+	"github.com/selesy/git-bug-ax/pkg/backlog"
+	"github.com/selesy/git-bug-ax/pkg/backlog/backlogtest"
 )
 
 func TestNew(t *testing.T) {
@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 	t.Run("with no options", func(t *testing.T) {
 		// t.Parallel()
 
-		backlog, err := ax.New(t.Context())
+		backlog, err := backlog.New(t.Context())
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 	t.Run("with WithEnsureUser", func(t *testing.T) {
 		// t.Parallel()
 
-		backlog, err := ax.New(t.Context(), ax.WithEnsureUser(true))
+		backlog, err := backlog.New(t.Context(), backlog.WithEnsureUser(true))
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
@@ -44,8 +44,8 @@ func TestNew(t *testing.T) {
 
 		const exp = "No identity is set.\nTo interact with bugs, an identity first needs to be created using \"git bug user new\" or adopted with \"git bug user adopt\""
 
-		path := axtest.NewRepo(t)
-		backlog, err := ax.New(t.Context(), ax.WithRepoPath(path), ax.WithEnsureUser(true))
+		path := backlogtest.NewRepo(t)
+		backlog, err := backlog.New(t.Context(), backlog.WithRepoPath(path), backlog.WithEnsureUser(true))
 		require.EqualError(t, err, exp)
 		assert.Nil(t, backlog)
 	})
@@ -53,8 +53,8 @@ func TestNew(t *testing.T) {
 	t.Run("with WithEnsureUser passes", func(t *testing.T) {
 		t.Parallel()
 
-		path := axtest.NewRepo(t, axtest.WithIdentityCount(1))
-		backlog, err := ax.New(t.Context(), ax.WithRepoPath(path), ax.WithEnsureUser(true))
+		path := backlogtest.NewRepo(t, backlogtest.WithIdentityCount(1))
+		backlog, err := backlog.New(t.Context(), backlog.WithRepoPath(path), backlog.WithEnsureUser(true))
 
 		require.NoError(t, err)
 		assert.NotNil(t, backlog)
@@ -77,20 +77,20 @@ time=2006-01-02T15:04:06.000Z level=DEBUG msg="backend closed"
 	)
 	logger := slog.New(handler)
 
-	backlog, err := ax.New(
+	backlog, err := backlog.New(
 		t.Context(),
-		ax.WithRepoPath(axtest.NewRepo(t, axtest.WithIdentityCount(1))),
-		ax.WithLogger(logger),
+		backlog.WithRepoPath(backlogtest.NewRepo(t, backlogtest.WithIdentityCount(1))),
+		backlog.WithLogger(logger),
 	)
 	require.NoError(t, err)
 	require.NoError(t, backlog.Close())
 	assert.Equal(t, exp, buf.String())
 }
 
-// func testBacklog(t *testing.T, opts ...ax.Option) *ax.Backlog {
+// func testBacklog(t *testing.T, opts ...backlog.Option) *backlog.Index {
 // 	t.Helper()
 
-// 	backlog, err := ax.New(t.Context(), opts...)
+// 	backlog, err := backlog.New(t.Context(), opts...)
 // 	require.NoError(t, err)
 
 // 	t.Cleanup(func() {

@@ -14,12 +14,12 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/selesy/git-bug-ax/pkg/ax"
+	"github.com/selesy/git-bug-ax/pkg/backlog"
 )
 
-// config holds the global CLI configuration state including logging and backlog.
+// config holds the global CLI configuration state including logging and index.
 type config struct {
-	backlog      *ax.Backlog
+	index        *backlog.Index
 	gitDir       string
 	human        bool
 	logger       *slog.Logger
@@ -95,36 +95,36 @@ func (cfg *config) Initialize() func(*cobra.Command, []string) error {
 	}
 }
 
-// LoadBacklog returns a Cobra PersistentPreRunE function that loads the backlog
-// from the git repository. The backlog is required by most CLI commands.
+// LoadBacklog returns a Cobra PersistentPreRunE function that loads the index
+// from the git repository. The index is required by most CLI commands.
 func (c *config) LoadBacklog() func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		opts := []ax.Option{ax.WithLogger(c.logger)}
+		opts := []backlog.Option{backlog.WithLogger(c.logger)}
 		if c.gitDir != "" {
-			opts = append(opts, ax.WithRepoPath(c.gitDir))
+			opts = append(opts, backlog.WithRepoPath(c.gitDir))
 		}
 
 		var err error
-		c.backlog, err = ax.New(cmd.Context(), opts...)
+		c.index, err = backlog.New(cmd.Context(), opts...)
 
 		return err
 	}
 }
 
-// LoadBacklogEnsureUser returns a Cobra PersistentPreRunE function that loads the backlog
+// LoadBacklogEnsureUser returns a Cobra PersistentPreRunE function that loads the index
 // and ensures a git user is configured. Used by commands that create new bug entries.
 func (c *config) LoadBacklogEnsureUser() func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		opts := []ax.Option{
-			ax.WithLogger(c.logger),
-			ax.WithEnsureUser(true),
+		opts := []backlog.Option{
+			backlog.WithLogger(c.logger),
+			backlog.WithEnsureUser(true),
 		}
 		if c.gitDir != "" {
-			opts = append(opts, ax.WithRepoPath(c.gitDir))
+			opts = append(opts, backlog.WithRepoPath(c.gitDir))
 		}
 
 		var err error
-		c.backlog, err = ax.New(cmd.Context(), opts...)
+		c.index, err = backlog.New(cmd.Context(), opts...)
 
 		return err
 	}

@@ -56,7 +56,7 @@ func showCmdFunc(cfg *config, opts *showOptions) func(*cobra.Command, []string) 
 			return ErrWrongPrefixCount
 		}
 
-		issue, err := cfg.backlog.ResolvePrefix(args[0])
+		issue, err := cfg.index.ResolvePrefix(args[0])
 		if err != nil {
 			return err
 		}
