@@ -1,33 +1,34 @@
-package issue
+package backlog
 
 import (
 	"github.com/selesy/git-bug-agent/internal/codec"
 	"github.com/selesy/git-bug-agent/internal/collections"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
 type issueWrapper struct {
 	i                 *Issue
 	createTitle       string
-	createDescription Description
+	createDescription issue.Description
 }
 
 func newIssueWrapper(iss *Issue) *issueWrapper {
 	return &issueWrapper{
 		i:                 iss,
 		createTitle:       "",
-		createDescription: Description{sections: make(map[Section][]string)},
+		createDescription: issue.Description{},
 	}
 }
 
-// Option is a function that applies an option to an Issue.
-type Option struct {
+// IssueOption is a function that applies an option to an Issue.
+type IssueOption struct {
 	fn    func(*issueWrapper) error
 	newFN func(*issueWrapper) error
 }
 
 // WithBlocks creates an option that sets the blocks relationship.
-func WithBlocks(blocks collections.Set[ID, *ID]) Option {
-	return Option{
+func WithBlocks(blocks collections.Set[issue.ID, *issue.ID]) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetBlocks(blocks)
 		},
@@ -35,8 +36,8 @@ func WithBlocks(blocks collections.Set[ID, *ID]) Option {
 }
 
 // WithTitle creates an option that sets the title.
-func WithDescription(description Description) Option {
-	return Option{
+func WithDescription(description issue.Description) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetDescription(description)
 		},
@@ -49,8 +50,8 @@ func WithDescription(description Description) Option {
 }
 
 // WithDiscoverer creates an option that sets the discoverer.
-func WithDiscoverer(id ID) Option {
-	return Option{
+func WithDiscoverer(id issue.ID) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.i.SetDiscoverer(id)
 			return nil
@@ -59,8 +60,8 @@ func WithDiscoverer(id ID) Option {
 }
 
 // WithLabels creates an option that sets the labels.
-func WithLabels(labels collections.Set[codec.Label, *codec.Label]) Option {
-	return Option{
+func WithLabels(labels collections.Set[codec.Label, *codec.Label]) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetLabels(labels)
 		},
@@ -68,8 +69,8 @@ func WithLabels(labels collections.Set[codec.Label, *codec.Label]) Option {
 }
 
 // WithParent creates an option that sets the parent issue.
-func WithParent(id ID) Option {
-	return Option{
+func WithParent(id issue.ID) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.i.SetParent(id)
 			return nil
@@ -78,8 +79,8 @@ func WithParent(id ID) Option {
 }
 
 // WithPriority creates an option that sets the priority.
-func WithPriority(p Priority) Option {
-	return Option{
+func WithPriority(p issue.Priority) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.i.SetPriority(p)
 			return nil
@@ -88,8 +89,8 @@ func WithPriority(p Priority) Option {
 }
 
 // WithReferences creates an option that sets the references relationship.
-func WithReferences(references collections.Set[ID, *ID]) Option {
-	return Option{
+func WithReferences(references collections.Set[issue.ID, *issue.ID]) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			return i.i.SetReferences(references)
 		},
@@ -97,8 +98,8 @@ func WithReferences(references collections.Set[ID, *ID]) Option {
 }
 
 // WithResolution creates an option that sets the resolution.
-func WithResolution(r Resolution) Option {
-	return Option{
+func WithResolution(r issue.Resolution) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.i.SetResolution(r)
 			return nil
@@ -107,8 +108,8 @@ func WithResolution(r Resolution) Option {
 }
 
 // WithStatus creates an option that sets the status.
-func WithStatus(s Status) Option {
-	return Option{
+func WithStatus(s issue.Status) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.i.SetStatus(s)
 			return nil
@@ -117,15 +118,15 @@ func WithStatus(s Status) Option {
 }
 
 // WithTitle creates an option that sets the title.
-func WithTitle(title string) Option {
-	return Option{
+func WithTitle(title string) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.createTitle = title
 			return i.i.SetTitle(title)
 		},
 		newFN: func(i *issueWrapper) error {
 			if title == "" {
-				return ErrNoTitle
+				return issue.ErrNoTitle
 			}
 
 			i.createTitle = title
@@ -136,8 +137,8 @@ func WithTitle(title string) Option {
 }
 
 // WithType creates an option that sets the type.
-func WithType(t Type) Option {
-	return Option{
+func WithType(t issue.Type) IssueOption {
+	return IssueOption{
 		fn: func(i *issueWrapper) error {
 			i.i.SetType(t)
 			return nil

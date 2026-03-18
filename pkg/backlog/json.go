@@ -1,4 +1,4 @@
-package issue
+package backlog
 
 import (
 	"encoding/json"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/selesy/git-bug-agent/internal/codec"
 	"github.com/selesy/git-bug-agent/internal/collections"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
 func (i *Issue) MarshalJSON() ([]byte, error) {
@@ -65,16 +66,16 @@ func (e *Excerpt) MarshalJSON() ([]byte, error) {
 // view is the lightweight format returned by list operations (ready, blocked, mine, etc).
 // It excludes body/description and computed fields, focusing on metadata needed for filtering and coordination.
 type view struct {
-	ID          ID                                         `json:"id"`
+	ID          issue.ID                                   `json:"id"`
 	Title       string                                     `json:"title"`
-	Description Description                                `json:"description"`
-	Type        Type                                       `json:"type"`
-	Status      Status                                     `json:"status"`
-	Priority    Priority                                   `json:"priority"`
+	Description issue.Description                          `json:"description"`
+	Type        issue.Type                                 `json:"type"`
+	Status      issue.Status                               `json:"status"`
+	Priority    issue.Priority                             `json:"priority"`
 	Assignee    interface{}                                `json:"assignee"` // issue.Assignee or null
-	Discoverer  ID                                         `json:"discoverer,omitempty"`
-	Parent      ID                                         `json:"parent,omitempty"`
-	Blocks      collections.Set[ID, *ID]                   `json:"blocks,omitempty"`
+	Discoverer  issue.ID                                   `json:"discoverer,omitempty"`
+	Parent      issue.ID                                   `json:"parent,omitempty"`
+	Blocks      collections.Set[issue.ID, *issue.ID]       `json:"blocks,omitempty"`
 	Labels      collections.Set[codec.Label, *codec.Label] `json:"labels"`
 	Created     *time.Time                                 `json:"created,omitempty"`
 	Updated     *time.Time                                 `json:"updated,omitempty"`
@@ -89,7 +90,7 @@ func newView(i *Issue) (*view, error) {
 
 	// Not having a Discoverer is not an error in this context
 	discoverer, err := i.Discoverer()
-	if errors.Is(err, ErrNoDiscoverer) {
+	if errors.Is(err, issue.ErrNoDiscoverer) {
 		err = nil
 	}
 
@@ -99,7 +100,7 @@ func newView(i *Issue) (*view, error) {
 
 	// Not having a parent is not an error in this context
 	parent, err := i.Parent()
-	if errors.Is(err, ErrNoParent) {
+	if errors.Is(err, issue.ErrNoParent) {
 		err = nil
 	}
 

@@ -1,4 +1,4 @@
-package issue
+package backlog
 
 import (
 	"encoding/json"
@@ -15,6 +15,7 @@ import (
 	"github.com/selesy/git-bug-agent/internal/codec"
 	"github.com/selesy/git-bug-agent/internal/collections"
 	"github.com/selesy/git-bug-agent/internal/metadata"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
 const defaultDescription = `{Overview paragraph describing the purpose and context of this work.}
@@ -67,7 +68,7 @@ type Issue struct {
 }
 
 // Create creates a new Issue with the given options.
-func Create(env *execenv.Env, opts ...Option) (*Issue, error) {
+func Create(env *execenv.Env, opts ...IssueOption) (*Issue, error) {
 	issWrap := newIssueWrapper(&Issue{})
 
 	var errs error
@@ -82,7 +83,7 @@ func Create(env *execenv.Env, opts ...Option) (*Issue, error) {
 	}
 
 	if issWrap.createTitle == "" {
-		return nil, ErrNoTitle
+		return nil, issue.ErrNoTitle
 	}
 
 	// TODO: should we add a default description if one is not provided?
@@ -146,10 +147,10 @@ func Wrap(b *cache.BugCache) (*Issue, error) {
 }
 
 // Blocks returns the current blocks relationship.
-func (i *Issue) Blocks() (collections.Set[ID, *ID], error) {
+func (i *Issue) Blocks() (collections.Set[issue.ID, *issue.ID], error) {
 	if b, ok := i.mutations["blocks"]; ok {
 		if blocksStr, ok := b.(string); ok {
-			result := make(collections.Set[ID, *ID])
+			result := make(collections.Set[issue.ID, *issue.ID])
 			if err := result.UnmarshalText([]byte(blocksStr)); err != nil {
 				return nil, err
 			}
@@ -157,17 +158,17 @@ func (i *Issue) Blocks() (collections.Set[ID, *ID], error) {
 		}
 	}
 	if b, exists := i.metadata[metadata.KeyBlocks]; exists {
-		result := make(collections.Set[ID, *ID])
+		result := make(collections.Set[issue.ID, *issue.ID])
 		if err := result.UnmarshalText([]byte(b)); err != nil {
 			return nil, err
 		}
 		return result, nil
 	}
-	return make(collections.Set[ID, *ID]), nil
+	return make(collections.Set[issue.ID, *issue.ID]), nil
 }
 
 // SetBlocks sets the blocks relationship.
-func (i *Issue) SetBlocks(blocks collections.Set[ID, *ID]) error {
+func (i *Issue) SetBlocks(blocks collections.Set[issue.ID, *issue.ID]) error {
 	data, err := blocks.MarshalText()
 	if err != nil {
 		return err
@@ -178,9 +179,9 @@ func (i *Issue) SetBlocks(blocks collections.Set[ID, *ID]) error {
 }
 
 // Description returns the "body" of the issue
-func (i *Issue) Description() Description {
+func (i *Issue) Description() issue.Description {
 	comments := i.bug.Snapshot().Comments
-	desc := Description{sections: make(map[Section][]string)}
+	desc := issue.Description{}
 	// TODO: handle err
 	_ = desc.UnmarshalText([]byte(comments[0].Message))
 
@@ -188,34 +189,34 @@ func (i *Issue) Description() Description {
 }
 
 // SetDescription sets the issue's description (first comment)
-func (i *Issue) SetDescription(description Description) error {
+func (i *Issue) SetDescription(description issue.Description) error {
 	_, _, err := i.bug.EditCreateComment(description.Raw())
 
 	return err
 }
 
 // Discoverer returns the current discoverer identity.
-func (i *Issue) Discoverer() (ID, error) {
+func (i *Issue) Discoverer() (issue.ID, error) {
 	if d, ok := i.mutations["discoverer"]; ok {
 		if discovererStr, ok := d.(string); ok {
-			return NewID(discovererStr)
+			return issue.NewID(discovererStr)
 		}
 	}
 	if d, exists := i.metadata[metadata.KeyDiscoverer]; exists {
-		return NewID(d)
+		return issue.NewID(d)
 	}
-	return ID{}, ErrNoDiscoverer
+	return issue.ID{}, issue.ErrNoDiscoverer
 }
 
 // SetDiscoverer sets the discoverer identity.
-func (i *Issue) SetDiscoverer(id ID) {
+func (i *Issue) SetDiscoverer(id issue.ID) {
 	i.mutations["discoverer"] = id.String()
 	i.dirty = true
 }
 
 // ID returns the ID of the issue.
-func (i *Issue) ID() ID {
-	return ID{
+func (i *Issue) ID() issue.ID {
+	return issue.ID{
 		Id: i.bug.Id(),
 	}
 }
@@ -278,51 +279,51 @@ func (i *Issue) SetLabels(newLabels collections.Set[codec.Label, *codec.Label]) 
 }
 
 // Parent returns the current parent issue.
-func (i *Issue) Parent() (ID, error) {
+func (i *Issue) Parent() (issue.ID, error) {
 	if p, ok := i.mutations["parent"]; ok {
 		if parentStr, ok := p.(string); ok {
-			return NewID(parentStr)
+			return issue.NewID(parentStr)
 		}
 	}
 	if p, exists := i.metadata[metadata.KeyParent]; exists {
-		return NewID(p)
+		return issue.NewID(p)
 	}
-	return ID{}, ErrNoParent
+	return issue.ID{}, issue.ErrNoParent
 }
 
 // SetParent sets the parent issue.
-func (i *Issue) SetParent(id ID) {
+func (i *Issue) SetParent(id issue.ID) {
 	i.mutations["parent"] = id.String()
 	i.dirty = true
 }
 
 // Priority returns the current priority of the issue.
-func (i *Issue) Priority() Priority {
+func (i *Issue) Priority() issue.Priority {
 	if p, ok := i.mutations["priority"]; ok {
-		if priority, ok := p.(Priority); ok {
+		if priority, ok := p.(issue.Priority); ok {
 			return priority
 		}
 	}
 	// Try to get from metadata
 	if p, exists := i.metadata[metadata.KeyPriority]; exists {
-		var priority Priority
+		var priority issue.Priority
 		_ = priority.UnmarshalText([]byte(p))
 		return priority
 	}
-	return PriorityMedium
+	return issue.PriorityMedium
 }
 
 // SetPriority sets the priority of the issue.
-func (i *Issue) SetPriority(p Priority) {
+func (i *Issue) SetPriority(p issue.Priority) {
 	i.mutations["priority"] = p
 	i.dirty = true
 }
 
 // References returns the current references relationship.
-func (i *Issue) References() (collections.Set[ID, *ID], error) {
+func (i *Issue) References() (collections.Set[issue.ID, *issue.ID], error) {
 	if r, ok := i.mutations["references"]; ok {
 		if referencesStr, ok := r.(string); ok {
-			result := make(collections.Set[ID, *ID])
+			result := make(collections.Set[issue.ID, *issue.ID])
 			if err := result.UnmarshalText([]byte(referencesStr)); err != nil {
 				return nil, err
 			}
@@ -330,17 +331,17 @@ func (i *Issue) References() (collections.Set[ID, *ID], error) {
 		}
 	}
 	if r, exists := i.metadata[metadata.KeyReferences]; exists {
-		result := make(collections.Set[ID, *ID])
+		result := make(collections.Set[issue.ID, *issue.ID])
 		if err := result.UnmarshalText([]byte(r)); err != nil {
 			return nil, err
 		}
 		return result, nil
 	}
-	return make(collections.Set[ID, *ID]), nil
+	return make(collections.Set[issue.ID, *issue.ID]), nil
 }
 
 // SetReferences sets the references relationship.
-func (i *Issue) SetReferences(references collections.Set[ID, *ID]) error {
+func (i *Issue) SetReferences(references collections.Set[issue.ID, *issue.ID]) error {
 	data, err := references.MarshalText()
 	if err != nil {
 		return err
@@ -351,43 +352,43 @@ func (i *Issue) SetReferences(references collections.Set[ID, *ID]) error {
 }
 
 // Resolution returns the current resolution of the issue.
-func (i *Issue) Resolution() Resolution {
+func (i *Issue) Resolution() issue.Resolution {
 	if r, ok := i.mutations["resolution"]; ok {
-		if resolution, ok := r.(Resolution); ok {
+		if resolution, ok := r.(issue.Resolution); ok {
 			return resolution
 		}
 	}
 	if r, exists := i.metadata[metadata.KeyResolution]; exists {
-		var resolution Resolution
+		var resolution issue.Resolution
 		_ = resolution.UnmarshalText([]byte(r))
 		return resolution
 	}
-	return Resolution{}
+	return issue.Resolution{}
 }
 
 // SetResolution sets the resolution of the issue.
-func (i *Issue) SetResolution(r Resolution) {
+func (i *Issue) SetResolution(r issue.Resolution) {
 	i.mutations["resolution"] = r
 	i.dirty = true
 }
 
 // Status returns the current status of the issue.
-func (i *Issue) Status() Status {
+func (i *Issue) Status() issue.Status {
 	if s, ok := i.mutations["status"]; ok {
-		if status, ok := s.(Status); ok {
+		if status, ok := s.(issue.Status); ok {
 			return status
 		}
 	}
 	if s, exists := i.metadata[metadata.KeyStatus]; exists {
-		var status Status
+		var status issue.Status
 		_ = status.UnmarshalText([]byte(s))
 		return status
 	}
-	return StatusDraft
+	return issue.StatusDraft
 }
 
 // SetStatus sets the status of the issue.
-func (i *Issue) SetStatus(s Status) {
+func (i *Issue) SetStatus(s issue.Status) {
 	i.mutations["status"] = s
 	i.dirty = true
 }
@@ -405,22 +406,22 @@ func (i *Issue) SetTitle(title string) error {
 }
 
 // Type returns the current type of the issue.
-func (i *Issue) Type() Type {
+func (i *Issue) Type() issue.Type {
 	if t, ok := i.mutations["type"]; ok {
-		if typ, ok := t.(Type); ok {
+		if typ, ok := t.(issue.Type); ok {
 			return typ
 		}
 	}
 	if t, exists := i.metadata[metadata.KeyType]; exists {
-		var issueType Type
+		var issueType issue.Type
 		_ = issueType.UnmarshalText([]byte(t))
 		return issueType
 	}
-	return TypeTask
+	return issue.TypeTask
 }
 
 // SetType sets the type of the issue.
-func (i *Issue) SetType(t Type) {
+func (i *Issue) SetType(t issue.Type) {
 	i.mutations["type"] = t
 	i.dirty = true
 }
@@ -471,7 +472,7 @@ func (i *Issue) Operations() []dag.Operation {
 }
 
 // Update updates the issue with the given options.
-func (i *Issue) Update(opts ...Option) (*Issue, error) {
+func (i *Issue) Update(opts ...IssueOption) (*Issue, error) {
 	wrapper := newIssueWrapper(i)
 
 	var errs error

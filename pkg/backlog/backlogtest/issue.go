@@ -1,25 +1,15 @@
-package issuetest
+package backlogtest
 
 import (
 	"testing"
 
 	"github.com/git-bug/git-bug/commands/bug/testenv"
 	"github.com/git-bug/git-bug/commands/execenv"
-	"github.com/git-bug/git-bug/entity"
 	"github.com/stretchr/testify/require"
 
 	"github.com/selesy/git-bug-agent/pkg/backlog"
 )
 
-func NewEnv(t *testing.T) (*execenv.Env, entity.Id) {
-	return testenv.NewTestEnvAndUser(t)
-}
-
-// func NewEnvWithIssues(t *testing.T) (*execenv.)
-
-// NewTestIssue is deprecated: use backlog.backlogtest.NewTestIssue instead.
-// This function is kept for backward compatibility with tests that import
-// issue options but should use the backlog Create function.
 func NewTestIssue(t *testing.T, opts ...backlog.IssueOption) (*execenv.Env, *backlog.Issue) {
 	t.Helper()
 

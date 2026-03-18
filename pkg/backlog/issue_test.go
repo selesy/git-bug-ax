@@ -1,4 +1,4 @@
-package issue_test
+package backlog_test
 
 import (
 	"maps"
@@ -6,14 +6,15 @@ import (
 
 	"github.com/git-bug/git-bug/cache"
 	"github.com/git-bug/git-bug/commands/bug/testenv"
+	"github.com/git-bug/git-bug/commands/execenv"
 	"github.com/git-bug/git-bug/entities/bug"
 	"github.com/git-bug/git-bug/entity/dag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/selesy/git-bug-agent/internal/metadata"
+	"github.com/selesy/git-bug-agent/pkg/backlog"
 	"github.com/selesy/git-bug-agent/pkg/issue"
-	"github.com/selesy/git-bug-agent/pkg/issue/issuetest"
 )
 
 func TestCreate(t *testing.T) {
@@ -29,7 +30,7 @@ func TestCreate(t *testing.T) {
 
 		env, _ := testenv.NewTestEnvAndUser(t)
 
-		_, err := issue.Create(env)
+		_, err := backlog.Create(env)
 		require.ErrorIs(t, err, issue.ErrNoTitle)
 	})
 
@@ -38,7 +39,7 @@ func TestCreate(t *testing.T) {
 
 		env, _ := testenv.NewTestEnvAndUser(t)
 
-		_, err := issue.Create(env, issue.WithTitle(""))
+		_, err := backlog.Create(env, backlog.WithTitle(""))
 		require.ErrorIs(t, err, issue.ErrNoTitle)
 	})
 
@@ -47,9 +48,9 @@ func TestCreate(t *testing.T) {
 
 		const testTitle = "Issue with only a title"
 
-		env, iss := issuetest.NewTestIssue(
+		env, iss := newTestIssue(
 			t,
-			issue.WithTitle(testTitle),
+			backlog.WithTitle(testTitle),
 		)
 
 		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
@@ -66,10 +67,10 @@ func TestCreate(t *testing.T) {
 
 		const testTitle = "Issue with a title and an empty description"
 
-		env, iss := issuetest.NewTestIssue(
+		env, iss := newTestIssue(
 			t,
-			issue.WithTitle(testTitle),
-			issue.WithDescription(newTestDescription(t, "")),
+			backlog.WithTitle(testTitle),
+			backlog.WithDescription(newTestDescription(t, "")),
 		)
 
 		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
@@ -84,10 +85,10 @@ func TestCreate(t *testing.T) {
 	t.Run("with valid WithTitle and WithDescription options", func(t *testing.T) {
 		t.Parallel()
 
-		env, iss := issuetest.NewTestIssue(
+		env, iss := newTestIssue(
 			t,
-			issue.WithTitle(testTitle),
-			issue.WithDescription(newTestDescription(t, testDescription)),
+			backlog.WithTitle(testTitle),
+			backlog.WithDescription(newTestDescription(t, testDescription)),
 		)
 
 		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
@@ -102,13 +103,13 @@ func TestCreate(t *testing.T) {
 	t.Run("with valid WithTitle, WithDescription and metadata options", func(t *testing.T) {
 		t.Parallel()
 
-		env, iss := issuetest.NewTestIssue(
+		env, iss := newTestIssue(
 			t,
-			issue.WithTitle(testTitle),
-			issue.WithDescription(newTestDescription(t, testDescription)),
-			issue.WithPriority(issue.PriorityHigh),
-			issue.WithStatus(issue.StatusDraft),
-			issue.WithType(issue.TypeBug),
+			backlog.WithTitle(testTitle),
+			backlog.WithDescription(newTestDescription(t, testDescription)),
+			backlog.WithPriority(issue.PriorityHigh),
+			backlog.WithStatus(issue.StatusDraft),
+			backlog.WithType(issue.TypeBug),
 		)
 
 		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
@@ -137,7 +138,7 @@ func TestIssue_Parent(t *testing.T) {
 		bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
 		require.NoError(t, err)
 
-		iss, err := issue.Wrap(bug)
+		iss, err := backlog.Wrap(bug)
 		require.NoError(t, err)
 
 		_, err = iss.Parent()
@@ -154,7 +155,7 @@ func TestIssue_Parent(t *testing.T) {
 		_, err = bug.SetMetadata(bugID, map[string]string{"gba_parent": bugID.String()})
 		require.NoError(t, err)
 
-		iss, err := issue.Wrap(bug)
+		iss, err := backlog.Wrap(bug)
 		require.NoError(t, err)
 
 		issID, err := issue.NewID(bugID.String())
@@ -176,7 +177,7 @@ func TestIssue_SetParent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, mutableMetadata(t, bug), metadata.KeyParent)
 
-	iss, err := issue.Wrap(bug)
+	iss, err := backlog.Wrap(bug)
 	require.NoError(t, err)
 	issID, err := issue.NewID(bugID.String())
 	require.NoError(t, err)
@@ -216,4 +217,18 @@ func newTestDescription(t *testing.T, description string) issue.Description {
 	require.NoError(t, (&d).UnmarshalText([]byte(description)))
 
 	return d
+}
+
+func newTestIssue(t *testing.T, opts ...backlog.IssueOption) (*execenv.Env, *backlog.Issue) {
+	t.Helper()
+
+	env, _ := testenv.NewTestEnvAndUser(t)
+	user, err := env.Backend.GetUserIdentity()
+	require.NoError(t, err)
+
+	iss, err := backlog.Create(env, opts...)
+	require.NoError(t, err)
+	require.NoError(t, iss.Commit(user))
+
+	return env, iss
 }

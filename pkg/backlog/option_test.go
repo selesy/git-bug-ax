@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
-
-	"github.com/selesy/git-bug-agent/pkg/backlog/backlogtest"
 )
 
 func TestNewConfigDefaults(t *testing.T) {
@@ -111,7 +109,7 @@ func TestNewConfigNoBackendWithEventConsumer(t *testing.T) {
 		return nil
 	}
 
-	logger, buf := backlogtest.DeterministicLogger(t)
+	logger, buf := deterministicLogger(t)
 
 	// This should set noBackend=true and the consumer, but log a warning
 	cfg, err := newConfig(ctx,
