@@ -40,11 +40,11 @@ repos:
     - id: my-cmd-repo
       alias: lichen-build
       name: lichen-build
-      args: ["bash", "-c", "go build -o ./bin/ax-lichen ."]
+      args: ["bash", "-c", "go build -o ./bin/gba-lichen ."]
     - id: my-cmd-repo
       alias: lichen-check
       name: lichen-check
-      args: ["bash", "-c", "go tool lichen ./bin/ax-lichen"]
+      args: ["bash", "-c", "go tool lichen ./bin/gba-lichen"]
 - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
   rev: v9.22.0
   hooks:

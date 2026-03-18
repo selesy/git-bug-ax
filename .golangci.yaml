@@ -31,7 +31,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - "github.com/selesy/git-bug-ax"
+        - "github.com/selesy/git-bug-agent"
   exclusions:
     generated: lax
     paths:

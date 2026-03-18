@@ -1,4 +1,4 @@
-module github.com/selesy/git-bug-ax
+module github.com/selesy/git-bug-agent
 
 go 1.26.1
 

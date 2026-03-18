@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/codec"
 )
 
 // Status represents the status of an issue.

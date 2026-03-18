@@ -7,8 +7,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/selesy/git-bug-ax/internal/gitbug"
-	"github.com/selesy/git-bug-ax/internal/otel"
+	"github.com/selesy/git-bug-agent/internal/gitbug"
+	"github.com/selesy/git-bug-agent/internal/otel"
 )
 
 type config struct {
@@ -30,13 +30,6 @@ func newConfig(ctx context.Context, opts ...Option) (*config, error) {
 	cfg := config{
 		gitbug: gitbugCfg,
 		otel:   otel.NewConfig(),
-		// path:           wd,
-		// ensureUser:     false,
-		// noBackend:      false,
-		// eventsConsumer: nil,
-		// logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
-		// meter:          metricnoop.NewMeterProvider().Meter("ax"),
-		// tracer:         tracenoop.NewTracerProvider().Tracer("ax"),
 	}
 
 	for _, opt := range opts {
@@ -54,7 +47,7 @@ func newConfig(ctx context.Context, opts ...Option) (*config, error) {
 	return &cfg, nil
 }
 
-// Option is a functional option for configuring the ax package.
+// Option is a functional option for configuring the gba package.
 type Option func(*config)
 
 // WithEnsureUser returns an Option that sets whether to ensure the user is configured.

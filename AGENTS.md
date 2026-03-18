@@ -1,6 +1,6 @@
-# Agent Instructions for `git-bug-ax`
+# Agent Instructions for `git-bug-agent`
 
-This document provides instructions for AI agents to effectively work within the `git-bug-ax` repository.
+This document provides instructions for AI agents to effectively work within the `git-bug-agent` repository.
 
 ## Project Overview
 
@@ -66,7 +66,7 @@ All project tasks are managed through `mage`. You must have `mage` installed to 
 - `pkg/`: Contains reusable library code organized by functionality.
 - `magefiles/`: Contains the `magefile.go` which defines the build, test, and run commands.
 - `go.mod`, `go.sum`: Go module files defining project dependencies.
-- `bin/`: This directory contains the compiled application binary (e.g., `bin/gbax`). It is created by the build process.
+- `bin/`: This directory contains the compiled application binary (e.g., `bin/gba`). It is created by the build process.
 
 ## Code Style and Conventions
 

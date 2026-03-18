@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+
+	"github.com/selesy/git-bug-agent/internal/app"
 )
 
 // Execute initializes and executes the CLI application, handling startup and cleanup.
@@ -23,7 +25,7 @@ func Execute() (err error) {
 			slog.Error(err.Error())
 		}
 
-		slog.Debug("ax stopped")
+		slog.Debug(app.Name + " stopped")
 
 		if cfg.logCloseFunc == nil {
 			return
@@ -45,12 +47,12 @@ func Execute() (err error) {
 	return // err
 }
 
-// RootCmd returns the root Cobra command for the git-bug-ax CLI application.
+// RootCmd returns the root Cobra command for the git-bug-agent CLI application.
 // It configures all persistent flags and registers subcommands.
 func RootCmd(cfg *config) (*cobra.Command, error) {
 
 	cmd := &cobra.Command{
-		Use:               "gbax",
+		Use:               app.Name,
 		Short:             "Git-Bug's Agent Interface",
 		Aliases:           []string{"list", "ls"},
 		PersistentPreRunE: cfg.Initialize(),
@@ -72,7 +74,7 @@ func RootCmd(cfg *config) (*cobra.Command, error) {
 
 	// Observability configuration
 	cmd.PersistentFlags().StringVar(&cfg.logLevel, "log-level", "INFO", "log level must be one of ERROR, WARN, INFO or DEBUG")
-	cmd.PersistentFlags().StringVar(&cfg.logDir, "log-dir", filepath.Join(cacheDir, "ax", "logs"), "path where logs will be written")
+	cmd.PersistentFlags().StringVar(&cfg.logDir, "log-dir", filepath.Join(cacheDir, app.Name, "logs"), "path where logs will be written")
 	cmd.PersistentFlags().StringVar(&cfg.logFormat, "log-format", "colorized", "one of colorized, json or text")
 
 	// Output formatting

@@ -7,7 +7,7 @@ import (
 
 	"github.com/git-bug/git-bug/entity"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/codec"
 )
 
 // ID wraps git-bug's entity.Id and implements TextCodec for

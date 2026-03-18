@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/internal/metadata"
-	"github.com/selesy/git-bug-ax/pkg/issue"
-	"github.com/selesy/git-bug-ax/pkg/issue/issuetest"
+	"github.com/selesy/git-bug-agent/internal/metadata"
+	"github.com/selesy/git-bug-agent/pkg/issue"
+	"github.com/selesy/git-bug-agent/pkg/issue/issuetest"
 )
 
 func TestCreate(t *testing.T) {
@@ -151,7 +151,7 @@ func TestIssue_Parent(t *testing.T) {
 		bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
 		require.NoError(t, err)
 
-		_, err = bug.SetMetadata(bugID, map[string]string{"ax_parent": bugID.String()})
+		_, err = bug.SetMetadata(bugID, map[string]string{"gba_parent": bugID.String()})
 		require.NoError(t, err)
 
 		iss, err := issue.Wrap(bug)

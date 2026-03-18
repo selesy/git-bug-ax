@@ -8,7 +8,7 @@ import (
 	"github.com/git-bug/git-bug/entity"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/pkg/issue"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
 func NewEnv(t *testing.T) (*execenv.Env, entity.Id) {

@@ -1,4 +1,4 @@
-// Package cli provides the command-line interface for git-bug-ax.
+// Package cli provides the command-line interface for git-bug-agent.
 package cli
 
 import (
@@ -14,8 +14,11 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/selesy/git-bug-ax/pkg/backlog"
+	"github.com/selesy/git-bug-agent/internal/app"
+	"github.com/selesy/git-bug-agent/pkg/backlog"
 )
+
+const logFileName = app.Name + ".log"
 
 // config holds the global CLI configuration state including logging and index.
 type config struct {
@@ -41,7 +44,7 @@ func (cfg *config) Initialize() func(*cobra.Command, []string) error {
 		}
 
 		rotator := &lumberjack.Logger{
-			Filename:   filepath.Join(cfg.logDir, "ax.log"),
+			Filename:   filepath.Join(cfg.logDir, logFileName),
 			MaxSize:    10,
 			MaxBackups: 3,
 			MaxAge:     28,
@@ -86,7 +89,7 @@ func (cfg *config) Initialize() func(*cobra.Command, []string) error {
 		// Set as default so you can use slog.Info() globally
 		slog.SetDefault(cfg.logger)
 
-		slog.Debug("ax started")
+		slog.Debug(app.Name + " started")
 		if warnMsg != "" {
 			slog.Warn(warnMsg, slog.String("value", cfg.logFormat))
 		}

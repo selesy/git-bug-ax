@@ -8,6 +8,8 @@ import (
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
+
+	"github.com/selesy/git-bug-agent/internal/app"
 )
 
 type Config struct {
@@ -20,8 +22,8 @@ type Config struct {
 func NewConfig(opts ...Option) *Config {
 	cfg := Config{
 		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		meter:  metricnoop.NewMeterProvider().Meter("ax"),
-		tracer: tracenoop.NewTracerProvider().Tracer("ax"),
+		meter:  metricnoop.NewMeterProvider().Meter(app.Name),
+		tracer: tracenoop.NewTracerProvider().Tracer(app.Name),
 	}
 
 	for _, opt := range opts {

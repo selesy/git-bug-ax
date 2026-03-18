@@ -7,8 +7,8 @@ import (
 	"github.com/git-bug/git-bug/cache"
 	"github.com/lmittmann/tint"
 
-	"github.com/selesy/git-bug-ax/internal/gitbug"
-	"github.com/selesy/git-bug-ax/internal/otel"
+	"github.com/selesy/git-bug-agent/internal/gitbug"
+	"github.com/selesy/git-bug-agent/internal/otel"
 )
 
 func newObservedEventConsumer(otelCfg *otel.Config) gitbug.EventConsumer {

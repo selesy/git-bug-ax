@@ -13,7 +13,7 @@ import (
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/selesy/git-bug-ax/pkg/backlog/backlogtest"
+	"github.com/selesy/git-bug-agent/pkg/backlog/backlogtest"
 )
 
 func TestNewConfigDefaults(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/pkg/issue"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
 func TestStatusConstants(t *testing.T) {

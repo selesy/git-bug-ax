@@ -9,7 +9,7 @@ import (
 	"github.com/git-bug/git-bug/repository"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/internal/gitbug"
+	"github.com/selesy/git-bug-agent/internal/gitbug"
 )
 
 // NewRepo creates a Git repository with charactistics described by the

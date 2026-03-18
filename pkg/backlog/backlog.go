@@ -11,9 +11,10 @@ import (
 	"github.com/lmittmann/tint"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/selesy/git-bug-ax/internal/gitbug"
-	"github.com/selesy/git-bug-ax/internal/otel"
-	"github.com/selesy/git-bug-ax/pkg/issue"
+	"github.com/selesy/git-bug-agent/internal/app"
+	"github.com/selesy/git-bug-agent/internal/gitbug"
+	"github.com/selesy/git-bug-agent/internal/otel"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
 // type Interface interface {
@@ -40,8 +41,8 @@ func New(ctx context.Context, opts ...Option) (*Index, error) {
 		return nil, err
 	}
 
-	ctx, axSpan := cfg.otel.Tracer().Start(ctx, "ax")
-	defer func() { otel.EndSpanOnError(axSpan, err) }()
+	ctx, gbaSpan := cfg.otel.Tracer().Start(ctx, app.Name)
+	defer func() { otel.EndSpanOnError(gbaSpan, err) }()
 	ctx, newSpan := cfg.otel.Tracer().Start(ctx, "new")
 	defer otel.EndSpan(newSpan, err)
 
@@ -55,7 +56,7 @@ func New(ctx context.Context, opts ...Option) (*Index, error) {
 		repo:   repo,
 		logger: cfg.otel.Logger(),
 		tracer: cfg.otel.Tracer(),
-		span:   axSpan,
+		span:   gbaSpan,
 	}
 
 	if !cfg.gitbug.NoBackend() {

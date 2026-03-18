@@ -8,7 +8,7 @@ import (
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
-	"github.com/selesy/git-bug-ax/internal/otel"
+	"github.com/selesy/git-bug-agent/internal/otel"
 )
 
 func TestNewConfig_DefaultValues(t *testing.T) {

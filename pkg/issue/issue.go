@@ -12,9 +12,9 @@ import (
 	"github.com/git-bug/git-bug/entities/identity"
 	"github.com/git-bug/git-bug/entity/dag"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
-	"github.com/selesy/git-bug-ax/internal/collections"
-	"github.com/selesy/git-bug-ax/internal/metadata"
+	"github.com/selesy/git-bug-agent/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/collections"
+	"github.com/selesy/git-bug-agent/internal/metadata"
 )
 
 const defaultDescription = `{Overview paragraph describing the purpose and context of this work.}

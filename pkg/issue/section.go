@@ -3,7 +3,7 @@ package issue
 import (
 	"fmt"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/codec"
 )
 
 var _ codec.TextCodec = (*Section)(nil)

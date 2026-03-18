@@ -1,8 +1,8 @@
 package issue
 
 import (
-	"github.com/selesy/git-bug-ax/internal/codec"
-	"github.com/selesy/git-bug-ax/internal/collections"
+	"github.com/selesy/git-bug-agent/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/collections"
 )
 
 type issueWrapper struct {

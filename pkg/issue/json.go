@@ -10,8 +10,8 @@ import (
 	"github.com/git-bug/git-bug/entity"
 	"github.com/git-bug/git-bug/entity/dag"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
-	"github.com/selesy/git-bug-ax/internal/collections"
+	"github.com/selesy/git-bug-agent/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/collections"
 )
 
 func (i *Issue) MarshalJSON() ([]byte, error) {

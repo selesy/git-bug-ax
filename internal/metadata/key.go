@@ -2,7 +2,7 @@ package metadata
 
 const (
 	// Prefix is the prefix prepended to all metadata keys
-	Prefix = "ax_"
+	Prefix = "gba_"
 
 	// KeyPriority is the metadata key for issue priority
 	KeyPriority = Prefix + "priority"

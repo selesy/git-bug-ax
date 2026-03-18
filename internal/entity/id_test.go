@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/internal/entity"
+	"github.com/selesy/git-bug-agent/internal/entity"
 )
 
 // TestNewID_ValidHexHash tests NewID with valid hex hashes.

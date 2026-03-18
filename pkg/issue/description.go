@@ -9,7 +9,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/codec"
 )
 
 var _ codec.TextCodec = (*Description)(nil)

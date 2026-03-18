@@ -6,8 +6,8 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/selesy/git-bug-ax/internal/otel"
-	"github.com/selesy/git-bug-ax/internal/otel/oteltest"
+	"github.com/selesy/git-bug-agent/internal/otel"
+	"github.com/selesy/git-bug-agent/internal/otel/oteltest"
 )
 
 func TestRecordError_WithNilError(t *testing.T) {

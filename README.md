@@ -1,10 +1,10 @@
-# git-bug-ax
+# git-bug-agent
 
-An agent-centric CLI for [git-bug](https://github.com/MichaelMure/git-bug), providing the optimal "Agent Experience" for coordinating swarms of coding agents.
+An agent-centric CLI for [git-bug](https://github.com/MichaelMure/git-bug), providing the optimal interface for coordinating swarms of coding agents.
 
 ## Overview
 
-`git-bug` is a decentralized, git-native issue tracker that stores issues as CRDT operations. `git-bug-ax` extends it with an alternate CLI optimized for autonomous coding agents rather than humans.
+`git-bug` is a decentralized, git-native issue tracker that stores issues as CRDT operations. `git-bug-agent` (executable: `gba`) extends it with an alternate CLI optimized for autonomous coding agents rather than humans.
 
 Key design goals:
 
@@ -41,11 +41,11 @@ Agent coordination pattern:
 
 ### Metadata Namespacing
 
-All ax-specific metadata fields are prefixed with `ax_` in the CRDT to avoid collision with git-bug's native fields. The prefix is stripped when returning snapshots to agents.
+All git-bug-agent metadata fields are prefixed with `gba_` in the CRDT to avoid collision with git-bug's native fields. The prefix is stripped when returning snapshots to agents.
 
 **Storage (CRDT):**
 ```
-ax_status, ax_type, ax_priority, ax_parent, ax_blocks, ax_claimed_by
+gba_status, gba_type, gba_priority, gba_parent, gba_blocks, gba_claimed_by
 ```
 
 **Snapshot (API response):**
@@ -55,7 +55,7 @@ status, type, priority, parent, blocks, claimed_by
 
 ## Metadata Fields
 
-### `ax_status`
+### `gba_status`
 
 Fine-grained status for agent coordination:
 
@@ -77,7 +77,7 @@ Fine-grained status for agent coordination:
 
 The `abandoned` vs `failed` distinction matters—`abandoned` means "try again," `failed` means "needs human input or re-planning." A `needs-replanning` status triggers a feedback loop, automatically notifying a planning agent that the original approach was flawed and requires a new plan.
 
-### `ax_type`
+### `gba_type`
 
 Issue classification for hierarchy and workflow:
 
@@ -88,7 +88,7 @@ Issue classification for hierarchy and workflow:
 - `spike` - Research/investigation (no deliverable)
 - `tech-debt` - Refactoring/cleanup
 
-### `ax_priority`
+### `gba_priority`
 
 Numeric priority for deterministic ordering. Lower numbers = higher priority.
 
@@ -99,11 +99,11 @@ Ordering for `next` and `claim-next`:
 
 Since git-bug identifies issues by their initial hash, combining priority with hash guarantees deterministic ordering across all agents in a swarm—no two agents will disagree on which task is "next."
 
-### `ax_required_capabilities`
+### `gba_required_capabilities`
 
 An array of strings specifying agent capabilities required for the task (e.g., `["go", "react", "database"]`). This allows for intelligent task routing in a swarm with specialized agents.
 
-### `ax_parent`
+### `gba_parent`
 
 Reference to parent issue ID. Enables hierarchy:
 
@@ -115,14 +115,14 @@ epic-1
 └── feature-2
 ```
 
-### `ax_blocks`
+### `gba_blocks`
 
 Array of issue IDs that this issue blocks. Stored as forward reference only.
 
 **Stored:** `task-1.blocks = ["task-2", "task-3"]`
 **Computed:** `task-2.blocked_by = ["task-1"]`
 
-### `ax_claimed_by`
+### `gba_claimed_by`
 
 Agent identifier of current claim holder. `null` when unclaimed.
 
@@ -137,15 +137,15 @@ When creating related issues, the issue hash isn't known until after creation. T
 Create issues first, then update relationships:
 
 ```bash
-ax create "feat(auth): add token validation" --type=task
+gba create "feat(auth): add token validation" --type=task
 # returns hash: d4e5f6
 
-ax create "feat(auth): add refresh tokens" --type=task
+gba create "feat(auth): add refresh tokens" --type=task
 # returns hash: g7h8i9
 
-ax block g7h8i9 d4e5f6
-ax reparent d4e5f6 a1b2c3
-ax reparent g7h8i9 a1b2c3
+gba block g7h8i9 d4e5f6
+gba reparent d4e5f6 a1b2c3
+gba reparent g7h8i9 a1b2c3
 ```
 
 **2. Symbolic names**
@@ -153,19 +153,19 @@ ax reparent g7h8i9 a1b2c3
 Assign a persistent symbolic name at creation that can be referenced before or after the hash is known:
 
 ```bash
-ax create "feat(auth): JWT authentication" --type=epic --name=auth-epic
-ax create "feat(auth): add token validation" --type=task --parent=@auth-epic
-ax create "feat(auth): add refresh tokens" --type=task --parent=@auth-epic --blocks=@auth-task1
+gba create "feat(auth): JWT authentication" --type=epic --name=auth-epic
+gba create "feat(auth): add token validation" --type=task --parent=@auth-epic
+gba create "feat(auth): add refresh tokens" --type=task --parent=@auth-epic --blocks=@auth-task1
 ```
 
-Symbolic names are stored in `ax_name` metadata and can be used interchangeably with hashes. The `@` prefix distinguishes names from hashes.
+Symbolic names are stored in `gba_name` metadata and can be used interchangeably with hashes. The `@` prefix distinguishes names from hashes.
 
 **3. Batch creation with placeholders**
 
 Single operation creates multiple issues with temporary placeholders:
 
 ```bash
-ax create-batch <<EOF
+gba create-batch <<EOF
 {
   "issues": [
     {"ref": "$epic", "title": "feat(auth): JWT authentication", "type": "epic"},
@@ -191,10 +191,10 @@ Returns resolved IDs:
 Allow unresolved references that get resolved lazily:
 
 ```bash
-ax create "feat(auth): add token validation" --type=task --parent=@auth-epic
+gba create "feat(auth): add token validation" --type=task --parent=@auth-epic
 # Warning: @auth-epic not found, relationship pending
 
-ax create "feat(auth): JWT authentication" --type=epic --name=auth-epic
+gba create "feat(auth): JWT authentication" --type=epic --name=auth-epic
 # Resolves pending parent reference for d4e5f6
 ```
 
@@ -232,7 +232,7 @@ chore(deps): update dependencies
 Benefits:
 
 - Direct mapping from issue → commit message
-- Type prefix aligns with `ax_type` field
+- Type prefix aligns with `gba_type` field
 - Scope signals affected area
 - Enables automated changelog generation
 - Machine-parseable
@@ -310,7 +310,7 @@ Parsing is lenient to accommodate human edits:
 ### Validation
 
 ```bash
-ax validate <id>
+gba validate <id>
 ```
 
 Returns warnings (not errors) for malformed bodies:
@@ -328,7 +328,7 @@ Returns warnings (not errors) for malformed bodies:
 ### Normalization
 
 ```bash
-ax normalize <id>
+gba normalize <id>
 ```
 
 Rewrites body with canonical headers and formatting while preserving content.
@@ -377,17 +377,17 @@ Read-only operations that don't create CRDT ops.
 
 | Operation | Description | Returns |
 |-----------|-------------|---------|
-| `ax ready` | Unblocked, claimable tasks | Array of snapshots |
-| `ax ready --type=task` | Filter by type | Array of snapshots |
-| `ax ready --label=backend` | Filter by label | Array of snapshots |
-| `ax ready --has-capability=go` | Filter by agent capability | Array of snapshots |
-| `ax mine` | Tasks claimed by this agent | Array of snapshots |
-| `ax blocked` | Tasks waiting on dependencies | Array with blocker info |
-| `ax children <id>` | Subtasks of an issue | Array of snapshots |
-| `ax blockers <id>` | What blocks this task | Array of snapshots |
-| `ax show <id>` | Full snapshot | Single snapshot |
-| `ax files <path>` | Tasks affecting a file/directory | Array of snapshots |
-| `ax next` | Highest priority ready task | Single snapshot |
+| `gba ready` | Unblocked, claimable tasks | Array of snapshots |
+| `gba ready --type=task` | Filter by type | Array of snapshots |
+| `gba ready --label=backend` | Filter by label | Array of snapshots |
+| `gba ready --has-capability=go` | Filter by agent capability | Array of snapshots |
+| `gba mine` | Tasks claimed by this agent | Array of snapshots |
+| `gba blocked` | Tasks waiting on dependencies | Array with blocker info |
+| `gba children <id>` | Subtasks of an issue | Array of snapshots |
+| `gba blockers <id>` | What blocks this task | Array of snapshots |
+| `gba show <id>` | Full snapshot | Single snapshot |
+| `gba files <path>` | Tasks affecting a file/directory | Array of snapshots |
+| `gba next` | Highest priority ready task | Single snapshot |
 
 ### Mutation Operations
 
@@ -395,18 +395,18 @@ Operations that create CRDT ops. All mutations return the resulting snapshot.
 
 | Operation | Description | CRDT Effect |
 |-----------|-------------|-------------|
-| `ax claim <id>` | Claim a task | Set status=claimed, claimed_by=agent |
-| `ax start <id>` | Begin work | Set status=in-progress |
-| `ax block <id> <blocker-id>` | Add dependency | Append to blocks list |
-| `ax unblock <id> <blocker-id>` | Remove dependency | Remove from blocks list |
-| `ax complete <id>` | Finish work | Set status=review or done |
-| `ax abandon <id> [reason]` | Give up task | Set status=abandoned |
-| `ax fail <id> <reason>` | Mark as failed | Set status=failed |
-| `ax reparent <id> <parent-id>` | Change parent | Set parent field |
-| `ax update-body <id> <section> <content>` | Edit body section | Replace Markdown section |
-| `ax label <id> <label>` | Add label | Append to labels |
-| `ax unlabel <id> <label>` | Remove label | Remove from labels |
-| `ax priority <id> <value>` | Set priority | Set priority field |
+| `gba claim <id>` | Claim a task | Set status=claimed, claimed_by=agent |
+| `gba start <id>` | Begin work | Set status=in-progress |
+| `gba block <id> <blocker-id>` | Add dependency | Append to blocks list |
+| `gba unblock <id> <blocker-id>` | Remove dependency | Remove from blocks list |
+| `gba complete <id>` | Finish work | Set status=review or done |
+| `gba abandon <id> [reason]` | Give up task | Set status=abandoned |
+| `gba fail <id> <reason>` | Mark as failed | Set status=failed |
+| `gba reparent <id> <parent-id>` | Change parent | Set parent field |
+| `gba update-body <id> <section> <content>` | Edit body section | Replace Markdown section |
+| `gba label <id> <label>` | Add label | Append to labels |
+| `gba unlabel <id> <label>` | Remove label | Remove from labels |
+| `gba priority <id> <value>` | Set priority | Set priority field |
 
 ### Compound Operations
 
@@ -414,12 +414,12 @@ Convenience operations combining multiple steps.
 
 | Operation | Description | Effect |
 |-----------|-------------|--------|
-| `ax claim-next` | Claim highest priority ready task | Find + claim atomically |
-| `ax claim-next --type=task` | Filter by type | Find + claim with filter |
-| `ax claim-next --has-capability=go` | Filter by agent capability | Find + claim with filter |
-| `ax log <id> <message>` | Add work log entry | Append comment |
-| `ax verify-claim <id>` | Check claim status | Returns boolean + current snapshot |
-| `ax decompose <id> <child-ids...>` | Create subtask relationship | Set children's parent, update original status |
+| `gba claim-next` | Claim highest priority ready task | Find + claim atomically |
+| `gba claim-next --type=task` | Filter by type | Find + claim with filter |
+| `gba claim-next --has-capability=go` | Filter by agent capability | Find + claim with filter |
+| `gba log <id> <message>` | Add work log entry | Append comment |
+| `gba verify-claim <id>` | Check claim status | Returns boolean + current snapshot |
+| `gba decompose <id> <child-ids...>` | Create subtask relationship | Set children's parent, update original status |
 
 ## MCP Tools
 
@@ -427,7 +427,7 @@ All operations are exposed as MCP tools with identical semantics:
 
 ```json
 {
-  "name": "ax_ready",
+  "name": "gba_ready",
   "parameters": {
     "type": "task",
     "label": "backend"
@@ -437,7 +437,7 @@ All operations are exposed as MCP tools with identical semantics:
 
 ```json
 {
-  "name": "ax_claim",
+  "name": "gba_claim",
   "parameters": {
     "id": "abc123"
   }
@@ -458,18 +458,18 @@ All operations are exposed as MCP tools with identical semantics:
 - [ ] `branch` field in metadata → naming convention or assigned branch for work
 - [ ] Formalize handoffs, e.g., a `qa-agent` that automatically picks up `review` tasks, runs the `Verification` command, and moves to `done` or `needs-replanning`.
 - [ ] **Branch Management Strategy**: Core metadata for branch tracking including name, strategy (feature-branch/trunk-based/fork), base branch, creation status, push status, and PR URL. Critical for swarm coordination.
-- [ ] **Work Session Persistence**: Track work sessions across interruptions with branch name, timestamps, heartbeat, progress percentage, and checkpoint messages. Add `ax checkpoint <id> <message>` and `ax resume <id>` operations.
-- [ ] **Pre-work Validation**: Add `ax validate-claim <id>` operation that checks if agent can complete work before claiming (environment requirements, file conflicts, capabilities, dependencies).
-- [ ] **Atomic Compound Operations**: Operations like `ax claim-and-start <id>` and `ax complete-and-unblock <id>` to reduce race condition windows.
+- [ ] **Work Session Persistence**: Track work sessions across interruptions with branch name, timestamps, heartbeat, progress percentage, and checkpoint messages. Add `gba checkpoint <id> <message>` and `gba resume <id>` operations.
+- [ ] **Pre-work Validation**: Add `gba validate-claim <id>` operation that checks if agent can complete work before claiming (environment requirements, file conflicts, capabilities, dependencies).
+- [ ] **Atomic Compound Operations**: Operations like `gba claim-and-start <id>` and `gba complete-and-unblock <id>` to reduce race condition windows.
 
 ### Agent Collaboration & Communication
 
-- [ ] **Multi-Agent Collaboration**: Support multiple agents per task with primary owner and collaborators (each with roles like reviewer, consultant). Add `ax invite <id> <agent-id> <role>` and `ax join <id> <role>` operations.
-- [ ] **Structured Agent Communication**: Beyond append-only comments, add structured handoff metadata with from/to agents, messages, concerns, decisions, and blockers removed. Add `ax handoff <id> <to-agent> --message="..." --concerns="..."` operation.
+- [ ] **Multi-Agent Collaboration**: Support multiple agents per task with primary owner and collaborators (each with roles like reviewer, consultant). Add `gba invite <id> <agent-id> <role>` and `gba join <id> <role>` operations.
+- [ ] **Structured Agent Communication**: Beyond append-only comments, add structured handoff metadata with from/to agents, messages, concerns, decisions, and blockers removed. Add `gba handoff <id> <to-agent> --message="..." --concerns="..."` operation.
 
 ### Conflict Detection & Coordination
 
-- [ ] **File-Level Conflict Detection**: Structured `files_affected` metadata with path, operation (modify/create/delete), and line ranges. Add `ax files-in-use` query to show what files are locked by in-progress tasks. Provide advisory warnings when claiming tasks that modify same files as other in-progress tasks.
+- [ ] **File-Level Conflict Detection**: Structured `files_affected` metadata with path, operation (modify/create/delete), and line ranges. Add `gba files-in-use` query to show what files are locked by in-progress tasks. Provide advisory warnings when claiming tasks that modify same files as other in-progress tasks.
 - [ ] **Workspace Isolation Metadata**: Track workspace type (worktree/container/vm), path, container ID, and devcontainer config to support parallel agent execution without interference.
 
 ### Verification & Quality
@@ -483,8 +483,8 @@ All operations are exposed as MCP tools with identical semantics:
 
 ### Query & Discovery
 
-- [ ] **Graph Query Operations**: Add operations like `ax tree <id>` (hierarchical view), `ax blockers-recursive <id>` (transitive closure), `ax impact <id>` (what this unblocks), `ax timeline <id>` (status change history).
-- [ ] **Search & Discovery**: Add `ax search <query>` (full-text), `ax similar <id>` (find similar tasks), `ax history <path>` (all tasks that modified file), `ax blame <path> <line>` (what task introduced line).
+- [ ] **Graph Query Operations**: Add operations like `gba tree <id>` (hierarchical view), `gba blockers-recursive <id>` (transitive closure), `gba impact <id>` (what this unblocks), `gba timeline <id>` (status change history).
+- [ ] **Search & Discovery**: Add `gba search <query>` (full-text), `gba similar <id>` (find similar tasks), `gba history <path>` (all tasks that modified file), `gba blame <path> <line>` (what task introduced line).
 
 ### Observability
 
@@ -497,7 +497,7 @@ All operations are exposed as MCP tools with identical semantics:
 - [ ] Max concurrent claims per agent
 - [ ] Circuit breaker: pause agent if failure rate spikes
 - [ ] **Escalation & Human-in-the-Loop**: Add `escalation_policy` metadata with max attempts, file patterns requiring human approval, notification triggers, and timeout. Track escalation status, timestamp, and reason.
-- [ ] **Schema Versioning**: Add `ax_schema_version` field to all snapshots for graceful handling of unknown fields from newer versions.
+- [ ] **Schema Versioning**: Add `gba_schema_version` field to all snapshots for graceful handling of unknown fields from newer versions.
 
 ### Templates
 
@@ -530,19 +530,19 @@ TODO
 
 ```bash
 # Find available work
-ax ready
+gba ready
 
 # Claim highest priority task
-ax claim-next --type=task
+gba claim-next --type=task
 
 # Start work
-ax start abc123
+gba start abc123
 
 # Log progress
-ax log abc123 "Implemented validation logic"
+gba log abc123 "Implemented validation logic"
 
 # Complete task
-ax complete abc123
+gba complete abc123
 ```
 
 ## License

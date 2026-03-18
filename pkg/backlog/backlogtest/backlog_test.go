@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/pkg/backlog/backlogtest"
+	"github.com/selesy/git-bug-agent/pkg/backlog/backlogtest"
 )
 
 func TestNew(t *testing.T) {

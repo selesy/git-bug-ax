@@ -10,8 +10,8 @@ import (
 
 	"github.com/selesy/deterministic"
 
-	"github.com/selesy/git-bug-ax/pkg/backlog"
-	"github.com/selesy/git-bug-ax/pkg/backlog/backlogtest"
+	"github.com/selesy/git-bug-agent/pkg/backlog"
+	"github.com/selesy/git-bug-agent/pkg/backlog/backlogtest"
 )
 
 func TestNew(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/codec"
 )
 
 // Priority represents the priority level of an issue.

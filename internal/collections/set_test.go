@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/selesy/git-bug-ax/internal/codec"
-	"github.com/selesy/git-bug-ax/internal/collections"
+	"github.com/selesy/git-bug-agent/internal/codec"
+	"github.com/selesy/git-bug-agent/internal/collections"
 )
 
 // TestSet_Add tests Set.Add method.
