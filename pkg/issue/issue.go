@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -51,6 +52,11 @@ const defaultDescription = `{Overview paragraph describing the purpose and conte
 
 - ` + "`go test ./pkg/api -run TestUserValidation`" + `
 `
+
+var (
+	_ json.Marshaler = (*Issue)(nil)
+	// _ json.Unmarshaler = (*Issue)(nil)
+)
 
 // Issue wraps a git-bug bug with additional fields and options.
 type Issue struct {
@@ -175,9 +181,9 @@ func (i *Issue) SetBlocks(blocks collections.Set[ID, *ID]) error {
 func (i *Issue) Description() Description {
 	comments := i.bug.Snapshot().Comments
 	desc := Description{sections: make(map[Section][]string)}
-	if len(comments) >= 1 {
-		_ = desc.UnmarshalText([]byte(comments[0].Message))
-	}
+	// TODO: handle err
+	_ = desc.UnmarshalText([]byte(comments[0].Message))
+
 	return desc
 }
 

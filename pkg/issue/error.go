@@ -2,6 +2,8 @@ package issue
 
 import "errors"
 
+var ErrNoCreate = errors.New("expected the first operation to be create")
+
 var ErrNoDiscoverer = errors.New("no discoverer has been set")
 
 var ErrNoParent = errors.New("no parent issue has been set")
