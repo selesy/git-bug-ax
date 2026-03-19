@@ -1,38 +1,41 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/git-bug/git-bug/entities/identity"
+	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
 
 	"github.com/selesy/git-bug-agent/internal/app"
+	"github.com/selesy/git-bug-agent/pkg/backlog"
 )
 
 // Execute initializes and executes the CLI application, handling startup and cleanup.
 func Execute() (err error) {
+	ctx := context.Background() // TODO: this should be cancellable and tied to signals
+
 	var cfg config
-
 	defer func() {
+		logResult(ctx, cfg, err)
 
-		if cfg.index != nil {
-			err = errors.Join(err, cfg.index.Close())
+		if err := closeIndex(cfg.index); err != nil {
+			cfg.logger.ErrorContext(ctx, "failed to close index", tint.Err(err))
 		}
 
-		if err != nil {
-			slog.Error(err.Error())
-		}
-
-		slog.Debug(app.Name + " stopped")
+		cfg.logger.DebugContext(ctx, app.Name+" stopped")
 
 		if cfg.logCloseFunc == nil {
 			return
 		}
 
 		if err := cfg.logCloseFunc(); err != nil {
-			slog.Error("lumberjack failed to close log file(s)")
+			cfg.logger.ErrorContext(ctx, "lumberjack failed to close log file(s)")
 		}
 	}()
 
@@ -42,7 +45,7 @@ func Execute() (err error) {
 		return err
 	}
 
-	err = cmd.Execute()
+	err = cmd.ExecuteContext(ctx)
 
 	return // err
 }
@@ -50,7 +53,6 @@ func Execute() (err error) {
 // RootCmd returns the root Cobra command for the git-bug-agent CLI application.
 // It configures all persistent flags and registers subcommands.
 func RootCmd(cfg *config) (*cobra.Command, error) {
-
 	cmd := &cobra.Command{
 		Use:               app.Name,
 		Short:             "Git-Bug's Agent Interface",
@@ -85,3 +87,67 @@ func RootCmd(cfg *config) (*cobra.Command, error) {
 
 	return cmd, err
 }
+
+func closeIndex(index *backlog.Index) error {
+	if index == nil {
+		return nil
+	}
+
+	return index.Close()
+}
+
+// In normal operation, there is one "wide" log entry written for each CLI
+// call as described at https://loggingsucks.com/.  This is clearly far
+// more valuable with structured logs but still nicely augments the records
+// written to the local log file.
+func logResult(ctx context.Context, cfg config, err error) {
+	// Sanitize the command line to avoid log injection (gosec G706)
+	var command []string
+	for _, tkn := range os.Args {
+		tkn = strings.ReplaceAll(tkn, "\n", "")
+		tkn = strings.ReplaceAll(tkn, "\r", "")
+		command = append(command, strings.TrimSpace(tkn))
+	}
+
+	userIdentity, idErr := cfg.index.UserIdentity()
+	if idErr != nil && !errors.Is(err, identity.ErrNoIdentitySet) {
+		cfg.logger.ErrorContext(ctx, "failed to retrieve user identity", tint.Err(err))
+	}
+
+	var userHuman string
+	if idErr == nil {
+		userHuman = userIdentity.Id().Human()
+	}
+
+	level := slog.LevelInfo
+	attrs := []any{
+		slog.String("command", strings.Join(command, " ")),
+		slog.String("identity", userHuman),
+		slog.String("trace_id", cfg.index.TraceID().String()),
+		slog.String("span_id", cfg.index.SpanID().String()),
+	}
+
+	if err != nil {
+		level = slog.LevelError
+		attrs = append(attrs, tint.Err(err))
+	}
+
+	// if identity := userIdentity(cfg.index); identity != "" {
+	// 	attrs = append(attrs, slog.String("identity", identity))
+	// }
+
+	cfg.logger.Log(ctx, level, app.Name+" CLI executed", attrs...)
+}
+
+// func userIdentity(index *backlog.Index) string {
+// 	if index == nil {
+// 		return ""
+// 	}
+
+// 	identity, err := index.GetUserIdentity()
+// 	if err != nil {
+// 		return "" // TODO: report warning?
+// 	}
+
+// 	return identity.Id().Human()
+// }

@@ -45,6 +45,11 @@ func New(ctx context.Context, opts ...Option) (*Index, error) {
 	ctx, newSpan := cfg.otel.Tracer().Start(ctx, "new")
 	defer otel.EndSpan(newSpan, err)
 
+	logger := cfg.otel.Logger().With(
+		slog.String("trace_id", string(gbaSpan.SpanContext().TraceID().String())),
+		slog.String("span_id", string(gbaSpan.SpanContext().SpanID().String())),
+	)
+
 	var repo repository.ClockedRepo
 	repo, err = repository.OpenGoGitRepo(cfg.gitbug.RepoPath(), gitbug.Namespace, []repository.ClockLoader{})
 	if err != nil {
@@ -53,7 +58,7 @@ func New(ctx context.Context, opts ...Option) (*Index, error) {
 
 	b := &Index{
 		repo:   repo,
-		logger: cfg.otel.Logger(),
+		logger: logger,
 		tracer: cfg.otel.Tracer(),
 		span:   gbaSpan,
 	}
@@ -78,9 +83,13 @@ func New(ctx context.Context, opts ...Option) (*Index, error) {
 		return b, nil
 	}
 
-	if _, err = identity.GetUserIdentity(b.repo); err != nil {
+	user, err := identity.GetUserIdentity(b.repo)
+	if err != nil {
 		return nil, err
 	}
+
+	b.logger = b.logger.With(slog.String("identity", user.Id().Human()))
+	b.logger.Debug("user ensured")
 
 	return b, nil
 }
@@ -126,4 +135,16 @@ func (b *Index) ResolvePrefix(prefix string) (*Issue, error) {
 	}
 
 	return Wrap(bug)
+}
+
+func (b *Index) SpanID() trace.SpanID {
+	return b.span.SpanContext().SpanID()
+}
+
+func (b *Index) TraceID() trace.TraceID {
+	return b.span.SpanContext().TraceID()
+}
+
+func (b *Index) UserIdentity() (*cache.IdentityCache, error) {
+	return b.backend.GetUserIdentity()
 }

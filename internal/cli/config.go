@@ -86,10 +86,7 @@ func (cfg *config) Initialize() func(*cobra.Command, []string) error {
 		cfg.session = fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d-%d", pid, now))))[:7]
 		cfg.logger = cfg.logger.With(slog.String("session", cfg.session))
 
-		// Set as default so you can use slog.Info() globally
-		slog.SetDefault(cfg.logger)
-
-		slog.Debug(app.Name + " started")
+		cfg.logger.Debug(app.Name + " started")
 		if warnMsg != "" {
 			slog.Warn(warnMsg, slog.String("value", cfg.logFormat))
 		}

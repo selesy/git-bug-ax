@@ -64,8 +64,8 @@ func TestNew(t *testing.T) {
 func TestBacklog_Close(t *testing.T) {
 	t.Parallel()
 
-	const exp = `time=2006-01-02T15:04:05.000Z level=DEBUG msg="backend started" identities=1 bugs=0
-time=2006-01-02T15:04:06.000Z level=DEBUG msg="backend closed"
+	const exp = `time=2006-01-02T15:04:05.000Z level=DEBUG msg="backend started" trace_id=00000000000000000000000000000000 span_id=0000000000000000 identities=1 bugs=0
+time=2006-01-02T15:04:06.000Z level=DEBUG msg="backend closed" trace_id=00000000000000000000000000000000 span_id=0000000000000000
 `
 
 	buf := &bytes.Buffer{}
@@ -86,14 +86,3 @@ time=2006-01-02T15:04:06.000Z level=DEBUG msg="backend closed"
 	require.NoError(t, backlog.Close())
 	assert.Equal(t, exp, buf.String())
 }
-
-// func testBacklog(t *testing.T, opts ...backlog.Option) *backlog.Index {
-// 	t.Helper()
-
-// 	backlog, err := backlog.New(t.Context(), opts...)
-// 	require.NoError(t, err)
-
-// 	t.Cleanup(func() {
-// 		require.NoError(t, backlog.Close())
-// 	})
-// }
