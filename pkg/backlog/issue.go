@@ -458,7 +458,9 @@ func (i *Issue) Operations() []dag.Operation {
 	return i.bug.Snapshot().Operations
 }
 
-// Update updates the issue with the given options.
+// Update applies the given update options to the issue.
+// It collects any errors that occur during option application and returns
+// the updated Issue along with any accumulated errors.
 func (i *Issue) Update(opts ...UpdateOption) (*Issue, error) {
 	var errs error
 	for _, opt := range opts {

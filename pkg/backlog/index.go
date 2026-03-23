@@ -145,6 +145,28 @@ func (b *Index) TraceID() trace.TraceID {
 	return b.span.SpanContext().TraceID()
 }
 
+// Update resolves an issue by ID and applies the given update options.
+// It returns the updated Issue or an error if resolution or update fails.
+func (i *Index) Update(id issue.ID, opts ...UpdateOption) (*Issue, error) {
+	iss, err := i.Resolve(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return iss.Update(opts...)
+}
+
+// UpdatePrefix resolves an issue by ID prefix and applies the given update options.
+// It returns the updated Issue or an error if resolution or update fails.
+func (i *Index) UpdatePrefix(prefix string, opts ...UpdateOption) (*Issue, error) {
+	iss, err := i.ResolvePrefix(prefix)
+	if err != nil {
+		return nil, err
+	}
+
+	return iss.Update(opts...)
+}
+
 func (b *Index) UserIdentity() (*cache.IdentityCache, error) {
 	return b.backend.GetUserIdentity()
 }

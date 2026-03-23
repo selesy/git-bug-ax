@@ -137,7 +137,7 @@ func (o WithTitle) applyUpdate(i *Issue) error {
 
 var _ UpdateOption = WithType{}
 
-type WithType issue.Status
+type WithType issue.Type
 
 func (o WithType) applyUpdate(i *Issue) error {
 	i.SetType(issue.Type(o))
