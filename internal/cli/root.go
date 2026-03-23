@@ -24,17 +24,19 @@ func Execute() (err error) {
 	defer func() {
 		logResult(ctx, cfg, err)
 
-		if err := closeIndex(cfg.index); err != nil {
+		if err := closeIndex(cfg.index); err != nil && cfg.logger != nil {
 			cfg.logger.ErrorContext(ctx, "failed to close index", tint.Err(err))
 		}
 
-		cfg.logger.DebugContext(ctx, app.Name+" stopped")
+		if cfg.logger != nil {
+			cfg.logger.DebugContext(ctx, app.Name+" stopped")
+		}
 
 		if cfg.logCloseFunc == nil {
 			return
 		}
 
-		if err := cfg.logCloseFunc(); err != nil {
+		if err := cfg.logCloseFunc(); err != nil && cfg.logger != nil {
 			cfg.logger.ErrorContext(ctx, "lumberjack failed to close log file(s)")
 		}
 	}()
@@ -101,12 +103,35 @@ func closeIndex(index *backlog.Index) error {
 // more valuable with structured logs but still nicely augments the records
 // written to the local log file.
 func logResult(ctx context.Context, cfg config, err error) {
+	// The logger is not loaded if a help command was run
+	if cfg.logger == nil {
+		return
+	}
+
 	// Sanitize the command line to avoid log injection (gosec G706)
 	var command []string
 	for _, tkn := range os.Args {
 		tkn = strings.ReplaceAll(tkn, "\n", "")
 		tkn = strings.ReplaceAll(tkn, "\r", "")
 		command = append(command, strings.TrimSpace(tkn))
+	}
+
+	level := slog.LevelInfo
+	attrs := []any{
+		slog.String("command", strings.Join(command, " ")),
+	}
+
+	if err != nil {
+		level = slog.LevelError
+		attrs = append(attrs, tint.Err(err))
+	}
+
+	// If the index isn't loaded, the identity, trace ID and span ID attributes
+	// make no sense.
+	if cfg.index == nil {
+		cfg.logger.Log(ctx, level, app.Name+" CLI executed", attrs...)
+
+		return
 	}
 
 	userIdentity, idErr := cfg.index.UserIdentity()
@@ -119,18 +144,11 @@ func logResult(ctx context.Context, cfg config, err error) {
 		userHuman = userIdentity.Id().Human()
 	}
 
-	level := slog.LevelInfo
-	attrs := []any{
-		slog.String("command", strings.Join(command, " ")),
+	attrs = append(attrs, []any{
 		slog.String("identity", userHuman),
 		slog.String("trace_id", cfg.index.TraceID().String()),
 		slog.String("span_id", cfg.index.SpanID().String()),
-	}
-
-	if err != nil {
-		level = slog.LevelError
-		attrs = append(attrs, tint.Err(err))
-	}
+	}...)
 
 	// if identity := userIdentity(cfg.index); identity != "" {
 	// 	attrs = append(attrs, slog.String("identity", identity))
