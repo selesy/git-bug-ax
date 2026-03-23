@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/git-bug/git-bug/commands/bug/testenv"
-	"github.com/git-bug/git-bug/commands/execenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/selesy/git-bug-agent/pkg/backlog"
+	"github.com/selesy/git-bug-agent/pkg/backlog/backlogtest"
 	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
@@ -19,10 +18,13 @@ func TestIssueMarshalJSON(t *testing.T) {
 	t.Run("marshals issue with history", func(t *testing.T) {
 		t.Parallel()
 
+		desc := newTestDescriptionJSON(t, "Test description")
+
 		_, iss := newTestIssueJSON(
 			t,
-			backlog.WithTitle("Test Issue"),
-			backlog.WithDescription(newTestDescriptionJSON(t, "Test description")),
+			issue.TypeTask,
+			"Test Issue",
+			&desc,
 		)
 
 		data, err := json.Marshal(iss)
@@ -42,10 +44,13 @@ func TestIssueMarshalJSON(t *testing.T) {
 	t.Run("history contains operations", func(t *testing.T) {
 		t.Parallel()
 
+		desc := newTestDescriptionJSON(t, "Test description")
+
 		_, iss := newTestIssueJSON(
 			t,
-			backlog.WithTitle("Test Issue"),
-			backlog.WithDescription(newTestDescriptionJSON(t, "Test description")),
+			issue.TypeTask,
+			"Test Issue",
+			&desc,
 		)
 
 		data, err := json.Marshal(iss)
@@ -57,7 +62,7 @@ func TestIssueMarshalJSON(t *testing.T) {
 
 		history, ok := result["history"].([]interface{})
 		require.True(t, ok, "history should be an array")
-		assert.Len(t, history, 1) // CreateOperation
+		assert.Len(t, history, 2) // CreateOperation and SetMetadataOperation
 
 		op, ok := history[0].(map[string]interface{})
 		require.True(t, ok)
@@ -73,10 +78,13 @@ func TestExcerptMarshalJSON(t *testing.T) {
 	t.Run("marshals excerpt without history", func(t *testing.T) {
 		t.Parallel()
 
+		desc := newTestDescriptionJSON(t, "Test description")
+
 		_, iss := newTestIssueJSON(
 			t,
-			backlog.WithTitle("Test Issue"),
-			backlog.WithDescription(newTestDescriptionJSON(t, "Test description")),
+			issue.TypeTask,
+			"Test Issue",
+			&desc,
 		)
 
 		excerpt := iss.Excerpt()
@@ -97,13 +105,14 @@ func TestExcerptMarshalJSON(t *testing.T) {
 	t.Run("excerpt contains metadata fields", func(t *testing.T) {
 		t.Parallel()
 
+		desc := newTestDescriptionJSON(t, "Test description")
+
 		_, iss := newTestIssueJSON(
 			t,
-			backlog.WithTitle("Test Issue"),
-			backlog.WithDescription(newTestDescriptionJSON(t, "Test description")),
+			issue.TypeTask,
+			"Test Issue",
+			&desc,
 			backlog.WithPriority(issue.PriorityHigh),
-			backlog.WithStatus(issue.StatusReady),
-			backlog.WithType(issue.TypeBug),
 		)
 
 		excerpt := iss.Excerpt()
@@ -122,18 +131,29 @@ func TestExcerptMarshalJSON(t *testing.T) {
 	})
 }
 
-func newTestIssueJSON(t *testing.T, opts ...backlog.IssueOption) (*execenv.Env, *backlog.Issue) {
+func newTestIssueJSON(t *testing.T, typ issue.Type, title string, description *issue.Description, opts ...backlog.CreateOption) (*backlog.Index, *backlog.Issue) {
 	t.Helper()
 
-	env, _ := testenv.NewTestEnvAndUser(t)
-	user, err := env.Backend.GetUserIdentity()
-	require.NoError(t, err)
+	// env, _ := testenv.NewTestEnvAndUser(t)
+	// user, err := env.Backend.GetUserIdentity()
+	// require.NoError(t, err)
 
-	iss, err := backlog.Create(env, opts...)
-	require.NoError(t, err)
-	require.NoError(t, iss.Commit(user))
+	// iss, err := backlog.Create(env, opts...)
+	// require.NoError(t, err)
+	// require.NoError(t, iss.Commit(user))
 
-	return env, iss
+	path := backlogtest.NewGitbugRepoPath(t, backlogtest.WithIdentityCount(1))
+
+	ind := backlogtest.NewIndex(
+		t,
+		backlog.WithRepoPath(path),
+	)
+
+	iss, err := ind.Create(typ, title, description, opts...)
+	require.NoError(t, err)
+	require.NoError(t, iss.Commit())
+
+	return ind, iss
 }
 
 func newTestDescriptionJSON(t *testing.T, description string) issue.Description {

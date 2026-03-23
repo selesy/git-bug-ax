@@ -99,7 +99,7 @@ func (cfg *config) Initialize() func(*cobra.Command, []string) error {
 // from the git repository. The index is required by most CLI commands.
 func (c *config) LoadBacklog() func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		opts := []backlog.Option{backlog.WithLogger(c.logger)}
+		opts := []backlog.IndexOption{backlog.WithLogger(c.logger)}
 		if c.gitDir != "" {
 			opts = append(opts, backlog.WithRepoPath(c.gitDir))
 		}
@@ -115,7 +115,7 @@ func (c *config) LoadBacklog() func(*cobra.Command, []string) error {
 // and ensures a git user is configured. Used by commands that create new bug entries.
 func (c *config) LoadBacklogEnsureUser() func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		opts := []backlog.Option{
+		opts := []backlog.IndexOption{
 			backlog.WithLogger(c.logger),
 			backlog.WithEnsureUser(true),
 		}

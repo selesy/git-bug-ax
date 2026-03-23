@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/git-bug/git-bug/cache"
-	"github.com/git-bug/git-bug/commands/execenv"
 	"github.com/git-bug/git-bug/entities/bug"
-	"github.com/git-bug/git-bug/entities/identity"
 	"github.com/git-bug/git-bug/entity/dag"
 
 	"github.com/selesy/git-bug-agent/internal/codec"
@@ -68,28 +67,20 @@ type Issue struct {
 }
 
 // Create creates a new Issue with the given options.
-func Create(env *execenv.Env, opts ...IssueOption) (*Issue, error) {
-	issWrap := newIssueWrapper(&Issue{})
-
-	var errs error
-	for _, opt := range opts {
-		if opt.newFN != nil {
-			errs = errors.Join(errs, opt.newFN(issWrap))
-		}
-	}
-
-	if errs != nil {
-		return nil, errs
-	}
-
-	if issWrap.createTitle == "" {
+func (i *Index) Create(typ issue.Type, title string, description *issue.Description, opts ...CreateOption) (*Issue, error) {
+	if title == "" {
 		return nil, issue.ErrNoTitle
 	}
 
 	// TODO: should we add a default description if one is not provided?
 	_ = defaultDescription
 
-	bug, _, err := env.Backend.Bugs().New(issWrap.createTitle, issWrap.createDescription.Raw())
+	desc := ""
+	if description != nil {
+		desc = description.Raw()
+	}
+
+	bug, _, err := i.backend.Bugs().New(title, desc)
 	if err != nil {
 		return nil, err
 	}
@@ -99,23 +90,14 @@ func Create(env *execenv.Env, opts ...IssueOption) (*Issue, error) {
 		return nil, err
 	}
 
-	// TODO: can this be reused?
-	issWrap = newIssueWrapper(iss)
+	iss.SetType(typ)
+	iss.SetStatus(issue.StatusDraft)
 
-	// var errs error
 	for _, opt := range opts {
-		if opt.newFN != nil {
-			continue
-		}
-
-		errs = errors.Join(errs, opt.fn(issWrap))
+		err = errors.Join(err, opt.applyCreate(iss))
 	}
 
-	if errs != nil {
-		return nil, errs
-	}
-
-	return iss, nil
+	return iss, err
 }
 
 // Wrap creates a new Issue wrapper around a BugCache.
@@ -133,9 +115,7 @@ func Wrap(b *cache.BugCache) (*Issue, error) {
 			continue
 		}
 
-		for k, v := range metaOp.NewMetadata {
-			metadata[k] = v
-		}
+		maps.Copy(metadata, metaOp.NewMetadata)
 	}
 
 	return &Issue{
@@ -179,6 +159,9 @@ func (i *Issue) SetBlocks(blocks collections.Set[issue.ID, *issue.ID]) error {
 }
 
 // Description returns the "body" of the issue
+// TODO: This doesn't return a pointer but all methods on Description have
+//
+//	have pointer receivers.
 func (i *Issue) Description() issue.Description {
 	comments := i.bug.Snapshot().Comments
 	desc := issue.Description{}
@@ -199,12 +182,14 @@ func (i *Issue) SetDescription(description issue.Description) error {
 func (i *Issue) Discoverer() (issue.ID, error) {
 	if d, ok := i.mutations["discoverer"]; ok {
 		if discovererStr, ok := d.(string); ok {
-			return issue.NewID(discovererStr)
+			return issue.ParseID(discovererStr)
 		}
 	}
+
 	if d, exists := i.metadata[metadata.KeyDiscoverer]; exists {
-		return issue.NewID(d)
+		return issue.ParseID(d)
 	}
+
 	return issue.ID{}, issue.ErrNoDiscoverer
 }
 
@@ -282,12 +267,14 @@ func (i *Issue) SetLabels(newLabels collections.Set[codec.Label, *codec.Label]) 
 func (i *Issue) Parent() (issue.ID, error) {
 	if p, ok := i.mutations["parent"]; ok {
 		if parentStr, ok := p.(string); ok {
-			return issue.NewID(parentStr)
+			return issue.ParseID(parentStr)
 		}
 	}
+
 	if p, exists := i.metadata[metadata.KeyParent]; exists {
-		return issue.NewID(p)
+		return issue.ParseID(p)
 	}
+
 	return issue.ID{}, issue.ErrNoParent
 }
 
@@ -427,7 +414,7 @@ func (i *Issue) SetType(t issue.Type) {
 }
 
 // Commit saves the issue changes to the bug.
-func (i *Issue) Commit(identity identity.Interface) error {
+func (i *Issue) Commit() error {
 	if !i.dirty {
 		return nil
 	}
@@ -472,12 +459,10 @@ func (i *Issue) Operations() []dag.Operation {
 }
 
 // Update updates the issue with the given options.
-func (i *Issue) Update(opts ...IssueOption) (*Issue, error) {
-	wrapper := newIssueWrapper(i)
-
+func (i *Issue) Update(opts ...UpdateOption) (*Issue, error) {
 	var errs error
 	for _, opt := range opts {
-		errs = errors.Join(errs, opt.fn(wrapper))
+		errs = errors.Join(errs, opt.applyUpdate(i))
 	}
 
 	return i, errs

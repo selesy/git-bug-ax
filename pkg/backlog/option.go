@@ -16,12 +16,7 @@ type config struct {
 	otel   *otel.Config
 }
 
-func newConfig(ctx context.Context, opts ...Option) (*config, error) {
-	// wd, err := os.Getwd()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
+func newConfig(ctx context.Context, opts ...IndexOption) (*config, error) {
 	gitbugCfg, err := gitbug.NewConfig()
 	if err != nil {
 		return nil, err
@@ -47,53 +42,53 @@ func newConfig(ctx context.Context, opts ...Option) (*config, error) {
 	return &cfg, nil
 }
 
-// Option is a functional option for configuring the gba package.
-type Option func(*config)
+// IndexOption is a functional option for configuring the gba package.
+type IndexOption func(*config)
 
 // WithEnsureUser returns an Option that sets whether to ensure the user is configured.
-func WithEnsureUser(ensureUser bool) Option {
+func WithEnsureUser(ensureUser bool) IndexOption {
 	return func(cfg *config) {
 		gitbug.WithEnsureUser(ensureUser)(cfg.gitbug)
 	}
 }
 
 // WithEventsConsumer returns an Option that sets the events consumer.
-func WithEventsConsumer(eventConsumer gitbug.EventConsumer) Option {
+func WithEventsConsumer(eventConsumer gitbug.EventConsumer) IndexOption {
 	return func(cfg *config) {
 		gitbug.WithEventConsumer(eventConsumer)(cfg.gitbug)
 	}
 }
 
 // WithNoBackend returns an Option that disables the backend.
-func WithNoBackend(noBackend bool) Option {
+func WithNoBackend(noBackend bool) IndexOption {
 	return func(cfg *config) {
 		gitbug.WithNoBackend(noBackend)(cfg.gitbug)
 	}
 }
 
 // WithRepoPath returns an Option that sets the repository path.
-func WithRepoPath(repoPath string) Option {
+func WithRepoPath(repoPath string) IndexOption {
 	return func(cfg *config) {
 		gitbug.WithRepoPath(repoPath)(cfg.gitbug)
 	}
 }
 
 // WithLogger returns an Option that sets the logger.
-func WithLogger(logger *slog.Logger) Option {
+func WithLogger(logger *slog.Logger) IndexOption {
 	return func(cfg *config) {
 		otel.WithLogger(logger)(cfg.otel)
 	}
 }
 
 // WithMeter returns an Option that sets the meter.
-func WithMeter(meter metric.Meter) Option {
+func WithMeter(meter metric.Meter) IndexOption {
 	return func(cfg *config) {
 		otel.WithMeter(meter)(cfg.otel)
 	}
 }
 
 // WithTracer returns an Option that sets the tracer.
-func WithTracer(tracer trace.Tracer) Option {
+func WithTracer(tracer trace.Tracer) IndexOption {
 	return func(cfg *config) {
 		otel.WithTracer(tracer)(cfg.otel)
 	}

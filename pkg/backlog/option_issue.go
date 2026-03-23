@@ -6,142 +6,141 @@ import (
 	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
-type issueWrapper struct {
-	i                 *Issue
-	createTitle       string
-	createDescription issue.Description
+type CreateOption interface {
+	UpdateOption
+	applyCreate(*Issue) error
 }
 
-func newIssueWrapper(iss *Issue) *issueWrapper {
-	return &issueWrapper{
-		i:                 iss,
-		createTitle:       "",
-		createDescription: issue.Description{},
-	}
+type UpdateOption interface {
+	applyUpdate(*Issue) error
 }
 
-// IssueOption is a function that applies an option to an Issue.
-type IssueOption struct {
-	fn    func(*issueWrapper) error
-	newFN func(*issueWrapper) error
+var _ CreateOption = WithBlocks{}
+
+type WithBlocks collections.Set[issue.ID, *issue.ID]
+
+func (o WithBlocks) applyCreate(i *Issue) error {
+	return i.SetBlocks(collections.Set[issue.ID, *issue.ID](o))
 }
 
-// WithBlocks creates an option that sets the blocks relationship.
-func WithBlocks(blocks collections.Set[issue.ID, *issue.ID]) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			return i.i.SetBlocks(blocks)
-		},
-	}
+func (o WithBlocks) applyUpdate(i *Issue) error {
+	return i.SetBlocks(collections.Set[issue.ID, *issue.ID](o))
 }
 
-// WithTitle creates an option that sets the title.
-func WithDescription(description issue.Description) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			return i.i.SetDescription(description)
-		},
-		newFN: func(i *issueWrapper) error {
-			i.createDescription = description
+var _ UpdateOption = WithDescription{}
 
-			return nil
-		},
-	}
+type WithDescription issue.Description
+
+func (o WithDescription) applyUpdate(i *Issue) error {
+	return i.SetDescription(issue.Description(o))
 }
 
-// WithDiscoverer creates an option that sets the discoverer.
-func WithDiscoverer(id issue.ID) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.i.SetDiscoverer(id)
-			return nil
-		},
-	}
+var _ CreateOption = WithDiscoverer{}
+
+type WithDiscoverer issue.ID
+
+func (o WithDiscoverer) applyCreate(i *Issue) error {
+	i.SetDiscoverer(issue.ID(o))
+
+	return nil
 }
 
-// WithLabels creates an option that sets the labels.
-func WithLabels(labels collections.Set[codec.Label, *codec.Label]) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			return i.i.SetLabels(labels)
-		},
-	}
+func (o WithDiscoverer) applyUpdate(i *Issue) error {
+	i.SetDiscoverer(issue.ID(o))
+
+	return nil
 }
 
-// WithParent creates an option that sets the parent issue.
-func WithParent(id issue.ID) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.i.SetParent(id)
-			return nil
-		},
-	}
+var _ CreateOption = WithLabels{}
+
+type WithLabels collections.Set[codec.Label, *codec.Label]
+
+func (o WithLabels) applyCreate(i *Issue) error {
+	return i.SetLabels(collections.Set[codec.Label, *codec.Label](o))
 }
 
-// WithPriority creates an option that sets the priority.
-func WithPriority(p issue.Priority) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.i.SetPriority(p)
-			return nil
-		},
-	}
+func (o WithLabels) applyUpdate(i *Issue) error {
+	return i.SetLabels(collections.Set[codec.Label, *codec.Label](o))
 }
 
-// WithReferences creates an option that sets the references relationship.
-func WithReferences(references collections.Set[issue.ID, *issue.ID]) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			return i.i.SetReferences(references)
-		},
-	}
+var _ CreateOption = WithParent{}
+
+type WithParent issue.ID
+
+func (o WithParent) applyCreate(i *Issue) error {
+	i.SetParent(issue.ID(o))
+
+	return nil
 }
 
-// WithResolution creates an option that sets the resolution.
-func WithResolution(r issue.Resolution) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.i.SetResolution(r)
-			return nil
-		},
-	}
+func (o WithParent) applyUpdate(i *Issue) error {
+	i.SetParent(issue.ID(o))
+
+	return nil
 }
 
-// WithStatus creates an option that sets the status.
-func WithStatus(s issue.Status) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.i.SetStatus(s)
-			return nil
-		},
-	}
+var _ CreateOption = WithPriority{}
+
+type WithPriority issue.Priority
+
+func (o WithPriority) applyCreate(i *Issue) error {
+	i.SetPriority(issue.Priority(o))
+
+	return nil
 }
 
-// WithTitle creates an option that sets the title.
-func WithTitle(title string) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.createTitle = title
-			return i.i.SetTitle(title)
-		},
-		newFN: func(i *issueWrapper) error {
-			if title == "" {
-				return issue.ErrNoTitle
-			}
+func (o WithPriority) applyUpdate(i *Issue) error {
+	i.SetPriority(issue.Priority(o))
 
-			i.createTitle = title
-
-			return nil
-		},
-	}
+	return nil
 }
 
-// WithType creates an option that sets the type.
-func WithType(t issue.Type) IssueOption {
-	return IssueOption{
-		fn: func(i *issueWrapper) error {
-			i.i.SetType(t)
-			return nil
-		},
-	}
+var _ CreateOption = WithReferences{}
+
+type WithReferences collections.Set[issue.ID, *issue.ID]
+
+func (o WithReferences) applyCreate(i *Issue) error {
+	return i.SetReferences(collections.Set[issue.ID, *issue.ID](o))
+}
+
+func (o WithReferences) applyUpdate(i *Issue) error {
+	return i.SetReferences(collections.Set[issue.ID, *issue.ID](o))
+}
+
+var _ UpdateOption = WithResolution{}
+
+type WithResolution issue.Resolution
+
+func (o WithResolution) applyUpdate(i *Issue) error {
+	i.SetResolution(issue.Resolution(o))
+
+	return nil
+}
+
+var _ UpdateOption = WithStatus{}
+
+type WithStatus issue.Status
+
+func (o WithStatus) applyUpdate(i *Issue) error {
+	i.SetStatus(issue.Status(o))
+
+	return nil
+}
+
+var _ UpdateOption = WithTitle("")
+
+type WithTitle string
+
+func (o WithTitle) applyUpdate(i *Issue) error {
+	return i.SetTitle(string(o))
+}
+
+var _ UpdateOption = WithType{}
+
+type WithType issue.Status
+
+func (o WithType) applyUpdate(i *Issue) error {
+	i.SetType(issue.Type(o))
+
+	return nil
 }

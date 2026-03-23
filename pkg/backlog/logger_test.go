@@ -16,7 +16,6 @@ func deterministicLogger(t *testing.T) (*slog.Logger, *bytes.Buffer) {
 		slog.NewTextHandler(buf, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
 		}),
-		deterministic.NowFunc(),
 	)
 	logger := slog.New(handler)
 

@@ -12,14 +12,31 @@ import (
 	"github.com/selesy/git-bug-agent/internal/gitbug"
 )
 
-// NewRepo creates a Git repository with charactistics described by the
-// passed options.  The returned string is a path to the new repository
-// or a sub-directory within the repository.  When the associated test
-// completes, the entire repository is closed and deleted.
-func NewRepo(t *testing.T, opts ...Option) string {
+func NewGitbugBackendRepoAndRepoPath(t *testing.T, opts ...Option) (*cache.RepoCache, *repository.GoGitRepo, string) {
 	t.Helper()
 
 	cfg := newConfig(t, opts...)
+	backend, repo, path := newGitbugBackendRepoAndRepoPath(t, cfg)
+
+	t.Cleanup(func() {
+		require.NoError(t, backend.Close())
+	})
+
+	return backend, repo, filepath.Join(append([]string{path}, cfg.subdir...)...)
+}
+
+func NewGitbugRepoPath(t *testing.T, opts ...Option) string {
+	t.Helper()
+
+	cfg := newConfig(t, opts...)
+	backend, _, path := newGitbugBackendRepoAndRepoPath(t, cfg)
+	require.NoError(t, backend.Close())
+
+	return path
+}
+
+func newGitbugBackendRepoAndRepoPath(t *testing.T, cfg *config) (*cache.RepoCache, *repository.GoGitRepo, string) {
+	t.Helper()
 
 	path := t.TempDir()
 
@@ -46,9 +63,7 @@ func NewRepo(t *testing.T, opts ...Option) string {
 		require.NoError(t, err)
 	}
 
-	require.NoError(t, backend.Close())
-
-	return filepath.Join(append([]string{path}, cfg.subdir...)...)
+	return backend, repo, path
 }
 
 type config struct {

@@ -2,11 +2,11 @@ package backlog
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/git-bug/git-bug/cache"
 	"github.com/git-bug/git-bug/entities/identity"
-	"github.com/git-bug/git-bug/entity"
 	"github.com/git-bug/git-bug/repository"
 	"github.com/lmittmann/tint"
 	"go.opentelemetry.io/otel/trace"
@@ -14,25 +14,18 @@ import (
 	"github.com/selesy/git-bug-agent/internal/app"
 	"github.com/selesy/git-bug-agent/internal/gitbug"
 	"github.com/selesy/git-bug-agent/internal/otel"
+	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
-// type Interface interface {
-// 	New(...Option) (*Issue, error)
-// 	Update(...Option) (*Issue, error)
-// 	Remove(entity.Id) error
-// }
-
 type Index struct {
-	// Git-bug
 	repo    repository.ClockedRepo
 	backend *cache.RepoCache
-	// Observability
-	logger *slog.Logger
-	tracer trace.Tracer
-	span   trace.Span
+	logger  *slog.Logger
+	tracer  trace.Tracer
+	span    trace.Span
 }
 
-func New(ctx context.Context, opts ...Option) (*Index, error) {
+func New(ctx context.Context, opts ...IndexOption) (*Index, error) {
 	var err error
 
 	cfg, err := newConfig(ctx, opts...)
@@ -45,53 +38,60 @@ func New(ctx context.Context, opts ...Option) (*Index, error) {
 	ctx, newSpan := cfg.otel.Tracer().Start(ctx, "new")
 	defer otel.EndSpan(newSpan, err)
 
+	backend, repo, err := gitbug.NewBackendAndRepo(ctx, cfg.gitbug)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := identity.GetUserIdentity(repo)
+	if err != nil && !errors.Is(err, identity.ErrNoIdentitySet) {
+		return nil, err
+	}
+
+	var human string
+	if user != nil {
+		human = user.Id().Human()
+	}
+
 	logger := cfg.otel.Logger().With(
-		slog.String("trace_id", string(gbaSpan.SpanContext().TraceID().String())),
+		slog.String("trace_id", gbaSpan.SpanContext().TraceID().String()),
 		slog.String("span_id", string(gbaSpan.SpanContext().SpanID().String())),
+		slog.String("identity", human),
 	)
 
-	var repo repository.ClockedRepo
-	repo, err = repository.OpenGoGitRepo(cfg.gitbug.RepoPath(), gitbug.Namespace, []repository.ClockLoader{})
-	if err != nil {
-		return nil, err
-	}
+	logger.DebugContext(
+		ctx,
+		"backend started",
+		slog.Int("identities", len(backend.Identities().AllIds())),
+		slog.Int("bugs", len(backend.Bugs().AllIds())),
+	)
 
-	b := &Index{
-		repo:   repo,
-		logger: logger,
-		tracer: cfg.otel.Tracer(),
-		span:   gbaSpan,
-	}
+	return &Index{
+		repo:    repo,
+		backend: backend,
+		logger:  logger,
+		tracer:  cfg.otel.Tracer(),
+		span:    gbaSpan,
+	}, nil
+}
 
-	if !cfg.gitbug.NoBackend() {
-		var events chan cache.BuildEvent
-		b.backend, events = cache.NewRepoCache(b.repo)
+func (i *Index) AllIDs() ([]issue.ID, error) {
+	bugIDs := i.backend.Bugs().AllIds()
+	issueIDs := make([]issue.ID, len(bugIDs))
 
-		if err = cfg.gitbug.EventConsumer()(ctx, events); err != nil {
-			return nil, err
+	var errs error
+	for i, bugID := range bugIDs {
+		issueID, err := issue.ParseID(bugID.String())
+		if err != nil {
+			errs = errors.Join(errs, err)
+
+			continue
 		}
 
-		b.logger.DebugContext(
-			ctx,
-			"backend started",
-			slog.Int("identities", len(b.backend.Identities().AllIds())),
-			slog.Int("bugs", len(b.backend.Bugs().AllIds())),
-		)
+		issueIDs[i] = issueID
 	}
 
-	if !cfg.gitbug.EnsureUser() {
-		return b, nil
-	}
-
-	user, err := identity.GetUserIdentity(b.repo)
-	if err != nil {
-		return nil, err
-	}
-
-	b.logger = b.logger.With(slog.String("identity", user.Id().Human()))
-	b.logger.Debug("user ensured")
-
-	return b, nil
+	return issueIDs, errs
 }
 
 func (b *Index) Close() error {
@@ -117,8 +117,8 @@ func (b *Index) Close() error {
 	return err
 }
 
-func (b *Index) Resolve(id entity.Id) (*Issue, error) {
-	bug, err := b.backend.Bugs().Resolve(id)
+func (b *Index) Resolve(id issue.ID) (*Issue, error) {
+	bug, err := b.backend.Bugs().Resolve(id.Id)
 	if err != nil {
 		return nil, err
 	}

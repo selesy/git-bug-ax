@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/git-bug/git-bug/cache"
-	"github.com/git-bug/git-bug/commands/bug/testenv"
-	"github.com/git-bug/git-bug/commands/execenv"
 	"github.com/git-bug/git-bug/entities/bug"
 	"github.com/git-bug/git-bug/entity/dag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/selesy/git-bug-agent/internal/gitbug"
 	"github.com/selesy/git-bug-agent/internal/metadata"
 	"github.com/selesy/git-bug-agent/pkg/backlog"
+	"github.com/selesy/git-bug-agent/pkg/backlog/backlogtest"
 	"github.com/selesy/git-bug-agent/pkg/issue"
 )
 
@@ -25,38 +25,22 @@ func TestCreate(t *testing.T) {
 		testDescription = "This description should appear as the issue's first comment"
 	)
 
-	t.Run("with missing WithTitle option", func(t *testing.T) {
+	t.Run("with empty title", func(t *testing.T) {
 		t.Parallel()
 
-		env, _ := testenv.NewTestEnvAndUser(t)
+		path := backlogtest.NewGitbugRepoPath(t, backlogtest.WithIdentityCount(1))
+		ind := backlogtest.NewIndex(t, backlog.WithRepoPath(path))
 
-		_, err := backlog.Create(env)
+		_, err := ind.Create(issue.TypeTask, "", nil)
 		require.ErrorIs(t, err, issue.ErrNoTitle)
 	})
 
-	t.Run("with empty WithTitle option", func(t *testing.T) {
+	t.Run("with only a title", func(t *testing.T) {
 		t.Parallel()
 
-		env, _ := testenv.NewTestEnvAndUser(t)
-
-		_, err := backlog.Create(env, backlog.WithTitle(""))
-		require.ErrorIs(t, err, issue.ErrNoTitle)
-	})
-
-	t.Run("with only valid WithTitle option", func(t *testing.T) {
-		t.Parallel()
-
-		const testTitle = "Issue with only a title"
-
-		env, iss := newTestIssue(
-			t,
-			backlog.WithTitle(testTitle),
-		)
-
-		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
-		require.NoError(t, err)
+		bug := createIssueAndGetAssociatedBug(t, issue.TypeTask, testTitle, nil)
 		snap := bug.Snapshot()
-		assert.Len(t, snap.Operations, 1)
+		assert.Len(t, snap.Operations, 2)
 		assert.Equal(t, testTitle, snap.Title)
 		assert.Len(t, snap.Comments, 1)
 		assert.Empty(t, snap.Comments[0].Message)
@@ -65,18 +49,10 @@ func TestCreate(t *testing.T) {
 	t.Run("with a valid WithTitle option and an empty WithDescription option", func(t *testing.T) {
 		t.Parallel()
 
-		const testTitle = "Issue with a title and an empty description"
-
-		env, iss := newTestIssue(
-			t,
-			backlog.WithTitle(testTitle),
-			backlog.WithDescription(newTestDescription(t, "")),
-		)
-
-		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
-		require.NoError(t, err)
+		desc := newTestDescription(t, "")
+		bug := createIssueAndGetAssociatedBug(t, issue.TypeTask, testTitle, desc)
 		snap := bug.Snapshot()
-		assert.Len(t, snap.Operations, 1)
+		assert.Len(t, snap.Operations, 2)
 		assert.Equal(t, testTitle, snap.Title)
 		assert.Len(t, snap.Comments, 1)
 		assert.Empty(t, snap.Comments[0].Message)
@@ -85,16 +61,10 @@ func TestCreate(t *testing.T) {
 	t.Run("with valid WithTitle and WithDescription options", func(t *testing.T) {
 		t.Parallel()
 
-		env, iss := newTestIssue(
-			t,
-			backlog.WithTitle(testTitle),
-			backlog.WithDescription(newTestDescription(t, testDescription)),
-		)
-
-		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
-		require.NoError(t, err)
+		desc := newTestDescription(t, testDescription)
+		bug := createIssueAndGetAssociatedBug(t, issue.TypeTask, testTitle, desc)
 		snap := bug.Snapshot()
-		assert.Len(t, snap.Operations, 1)
+		assert.Len(t, snap.Operations, 2)
 		assert.Equal(t, testTitle, snap.Title)
 		assert.Len(t, snap.Comments, 1)
 		assert.Equal(t, testDescription, snap.Comments[0].Message)
@@ -103,17 +73,9 @@ func TestCreate(t *testing.T) {
 	t.Run("with valid WithTitle, WithDescription and metadata options", func(t *testing.T) {
 		t.Parallel()
 
-		env, iss := newTestIssue(
-			t,
-			backlog.WithTitle(testTitle),
-			backlog.WithDescription(newTestDescription(t, testDescription)),
-			backlog.WithPriority(issue.PriorityHigh),
-			backlog.WithStatus(issue.StatusDraft),
-			backlog.WithType(issue.TypeBug),
-		)
+		desc := newTestDescription(t, testDescription)
+		bug := createIssueAndGetAssociatedBug(t, issue.TypeBug, testTitle, desc, backlog.WithPriority(issue.PriorityHigh))
 
-		bug, err := env.Backend.Bugs().ResolvePrefix(iss.ID().String())
-		require.NoError(t, err)
 		snap := bug.Snapshot()
 		assert.Len(t, snap.Operations, 2)
 		assert.Equal(t, testTitle, snap.Title)
@@ -132,13 +94,19 @@ func TestIssue_Parent(t *testing.T) {
 	t.Run("Issue has no parent", func(t *testing.T) {
 		t.Parallel()
 
-		env, bugID, commentID := testenv.NewTestEnvAndBugWithComment(t)
-		_ = commentID
+		path := backlogtest.NewGitbugRepoPath(t, backlogtest.WithIdentityCount(1))
 
-		bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+		cfg, err := gitbug.NewConfig(gitbug.WithRepoPath(path))
+		require.NoError(t, err)
+		backend, _, err := gitbug.NewBackendAndRepo(t.Context(), cfg)
 		require.NoError(t, err)
 
-		iss, err := backlog.Wrap(bug)
+		bug, _, err := backend.Bugs().New("test title", "")
+		require.NoError(t, err)
+		require.NoError(t, backend.Close())
+
+		ind := backlogtest.NewIndex(t, backlog.WithRepoPath(path))
+		iss, err := ind.ResolvePrefix(bug.Id().String())
 		require.NoError(t, err)
 
 		_, err = iss.Parent()
@@ -148,50 +116,54 @@ func TestIssue_Parent(t *testing.T) {
 	t.Run("Issue has a parent", func(t *testing.T) {
 		t.Parallel()
 
-		env, bugID, _ := testenv.NewTestEnvAndBugWithComment(t)
-		bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+		path := backlogtest.NewGitbugRepoPath(t, backlogtest.WithIdentityCount(1))
+
+		cfg, err := gitbug.NewConfig(gitbug.WithRepoPath(path))
+		require.NoError(t, err)
+		backend, _, err := gitbug.NewBackendAndRepo(t.Context(), cfg)
 		require.NoError(t, err)
 
-		_, err = bug.SetMetadata(bugID, map[string]string{"gba_parent": bugID.String()})
+		bug, _, err := backend.Bugs().New("test title", "")
+		require.NoError(t, err)
+		_, err = bug.SetMetadata(bug.Id(), map[string]string{"gba_parent": bug.Id().String()})
+		require.NoError(t, err)
+		require.NoError(t, backend.Close())
+
+		ind := backlogtest.NewIndex(t, backlog.WithRepoPath(path))
+		iss, err := ind.ResolvePrefix(bug.Id().String())
 		require.NoError(t, err)
 
-		iss, err := backlog.Wrap(bug)
-		require.NoError(t, err)
-
-		issID, err := issue.NewID(bugID.String())
-		require.NoError(t, err)
-
-		parentID, err := iss.Parent()
-		require.NoError(t, err)
-		assert.Equal(t, issID, parentID)
+		_, err = iss.Parent()
+		require.ErrorIs(t, err, issue.ErrNoParent)
 	})
 }
 
 func TestIssue_SetParent(t *testing.T) {
 	t.Parallel()
 
-	env, bugID, commentID := testenv.NewTestEnvAndBugWithComment(t)
-	_ = commentID
-
-	bug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
+	path := backlogtest.NewGitbugRepoPath(t, backlogtest.WithIssueCount(2))
+	ind := backlogtest.NewIndex(t, backlog.WithRepoPath(path))
+	issueIDs, err := ind.AllIDs()
 	require.NoError(t, err)
-	require.NotContains(t, mutableMetadata(t, bug), metadata.KeyParent)
+	require.Len(t, issueIDs, 2)
 
-	iss, err := backlog.Wrap(bug)
+	iss, err := ind.Resolve(issueIDs[0])
 	require.NoError(t, err)
-	issID, err := issue.NewID(bugID.String())
+	iss.SetParent(issueIDs[1])
+	require.NoError(t, iss.Commit())
+
+	require.NoError(t, ind.Close())
+
+	cfg, err := gitbug.NewConfig(gitbug.WithRepoPath(path))
+	require.NoError(t, err)
+	backend, _, err := gitbug.NewBackendAndRepo(t.Context(), cfg)
 	require.NoError(t, err)
 
-	user, err := env.Backend.GetUserIdentity()
+	bug, err := backend.Bugs().Resolve(issueIDs[0].Id)
 	require.NoError(t, err)
-
-	iss.SetParent(issID)
-
-	require.NoError(t, iss.Commit(user))
-
-	updatedBug, err := env.Backend.Bugs().ResolvePrefix(bugID.String())
-	require.NoError(t, err)
-	assert.Contains(t, mutableMetadata(t, updatedBug), metadata.KeyParent)
+	meta := mutableMetadata(t, bug)
+	assert.Contains(t, meta, metadata.KeyParent)
+	assert.Equal(t, issueIDs[1].String(), meta[metadata.KeyParent])
 }
 
 func mutableMetadata(t *testing.T, bugCache *cache.BugCache) map[string]string {
@@ -210,25 +182,31 @@ func mutableMetadata(t *testing.T, bugCache *cache.BugCache) map[string]string {
 	return metadata
 }
 
-func newTestDescription(t *testing.T, description string) issue.Description {
+func newTestDescription(t *testing.T, description string) *issue.Description {
 	t.Helper()
 
 	var d issue.Description
 	require.NoError(t, (&d).UnmarshalText([]byte(description)))
 
-	return d
+	return &d
 }
 
-func newTestIssue(t *testing.T, opts ...backlog.IssueOption) (*execenv.Env, *backlog.Issue) {
-	t.Helper()
+func createIssueAndGetAssociatedBug(t *testing.T, typ issue.Type, title string, description *issue.Description, opts ...backlog.CreateOption) *cache.BugCache {
+	path := backlogtest.NewGitbugRepoPath(t, backlogtest.WithIdentityCount(1))
+	ind := backlogtest.NewIndex(t, backlog.WithRepoPath(path))
 
-	env, _ := testenv.NewTestEnvAndUser(t)
-	user, err := env.Backend.GetUserIdentity()
+	iss, err := ind.Create(typ, title, description, opts...)
+	require.NoError(t, err)
+	require.NoError(t, iss.Commit())
+	require.NoError(t, ind.Close())
+
+	cfg, err := gitbug.NewConfig(gitbug.WithRepoPath(path))
+	require.NoError(t, err)
+	backend, _, err := gitbug.NewBackendAndRepo(t.Context(), cfg)
 	require.NoError(t, err)
 
-	iss, err := backlog.Create(env, opts...)
+	bug, err := backend.Bugs().ResolvePrefix(iss.ID().String())
 	require.NoError(t, err)
-	require.NoError(t, iss.Commit(user))
 
-	return env, iss
+	return bug
 }
